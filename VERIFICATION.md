@@ -18,13 +18,13 @@ The checkout was clean at the beginning of the audit. `git pull --ff-only origin
 - Mobile browser at 390px: catalog-to-book flow reaches the closed-booking message; content fits without horizontal overflow. Fixed the menu remaining open after route navigation; verified closure and Escape returning focus to the summary. Login fields have associated labels and correct autocomplete. Fixed normal unsigned redirects incorrectly displaying a failed-login message.
 - Git-history scan found no private keys, Stripe/Supabase secret patterns or service-role JWTs in 228 inspected blobs before the final documentation commit. Scanner output reports its limitations; this is not a guarantee covering every credential format.
 
-## Read-only live Supabase verification
+## Live Supabase verification
 
-Project `fwxothhjxtvuupyeqsri`, Jaz It Up, America/Chicago: nine applied migrations through `20261014182155`; 21 public tables all have RLS enabled; zero appointments at audit time; one owner membership. No test customers or appointments were inserted into this live project.
+Project `fwxothhjxtvuupyeqsri`, Jaz It Up, America/Chicago: all 11 migrations through `20261014193528` are now applied; all 27 public tables have RLS enabled; zero appointments and one owner membership remain after migration. No test customers or appointments were inserted into this live project.
 
 All 23 services and 15 variants were compared against the supplied owner catalog snapshot, including pricing, timing, length, approval flags and chemical bundles: **zero differences**. Unknown/provisional values remain visible but not instantly bookable. Confirmed Tue–Fri 09:00–19:00 / Sat 09:00–15:00 hours remain editable, with no automatic lunch/breaks.
 
-The communications migration `20261014184518` is still absent after an earlier connector failure (`Invalid or expired requestState`). The new limiter migration `20261014193528` is also pending. Their success in CI is not live migration success. Public contact/address fields are blank. Supabase's advisor reports leaked-password protection disabled; intentionally service-only RLS tables without policies are informational, not an instruction to open access.
+The communications migration `20261014184518` and limiter migration `20261014193528` were applied through Supabase CLI after a verified encrypted export. A fresh dry run reports up to date. Read-back confirmed catalog, schedule, staff and role data unchanged; 11 sensitive RPCs are not executable by anonymous or authenticated client roles. Payment policy remains `none`; email, SMS and reminders are off. See [the migration record](docs/MIGRATION_RECORD_2026-10-14.md). Public contact/address fields are blank. Supabase's advisor reports leaked-password protection disabled; intentionally service-only RLS tables without policies are informational, not an instruction to open access.
 
 ## Deployment and acceptance limits
 

@@ -76,12 +76,12 @@ npx supabase db push --linked --dry-run --skip-vault
 npx supabase db push --linked --skip-vault
 ```
 
-For a test project, replace the reference with its explicitly selected ID. Use interactive prompts for credentials, never command-line password arguments. In the existing salon, nine migrations are applied through `20261014182155_delia_confirmed_schedule.sql`; the expected pending files are:
+For a test project, replace the reference with its explicitly selected ID. Use interactive prompts for credentials, never command-line password arguments. The existing salon now has all 11 tracked migrations applied. These two files were applied in order on October 14, 2026 after the encrypted backup described in [the migration record](docs/MIGRATION_RECORD_2026-10-14.md):
 
 1. `20261014184518_communications_and_optional_deposits.sql`
 2. `20261014193528_launch_safety_and_api_limits.sql`
 
-The earlier live migration attempt failed with `Invalid or expired requestState`; read-back confirmed it was not applied. Do not assume the Supabase/Vercel integration applies SQL. Stop if the dry run lists unexpected history. Never use `db reset`, `--include-all`, seed replay or migration-history repair on production as a shortcut. The migrations preserve IDs/history and use forward changes; the communications migration suppresses the legacy unapproved queue. Deploy the matching app before restarting workers.
+The earlier connector failure was resolved by applying the exact repository files with Supabase CLI 2.121.0 over certificate-verified TLS. Post-apply history and a fresh dry run confirm zero pending migrations. Do not rerun them. Do not assume the Supabase/Vercel integration applies SQL. Stop if the dry run lists unexpected history. Never use `db reset`, `--include-all`, seed replay or migration-history repair on production as a shortcut. The migrations preserve IDs/history and use forward changes; the communications migration suppresses the legacy unapproved queue. Deploy the matching app before restarting workers.
 
 After applying: re-read history; verify `communication_settings`, `booking_requests`, `payment_readiness`, `api_rate_limits`, RLS and grants; compare salon/staff IDs, hours, appointments and service approvals with the backup. Run the acceptance script on the test project, not test SQL against production. A service-only table with RLS and no client policies is intentionally private; do not add permissive policies to silence an informational advisor. Resolve any real auth/security warning separately.
 
@@ -160,6 +160,8 @@ Application errors log static event names, safe codes and random references. Con
 ## Backup, rollback and recovery
 
 Follow [Supabase's backup documentation](https://supabase.com/docs/guides/platform/backups). Confirm the actual plan and last successful backup; free projects do not include managed automatic backups. Pro daily backups retain seven days. Database backups do not contain Storage object contents, and custom-role passwords need separate handling. If exporting, use the official complete backup procedure covering application schema/data, Auth identities, roles/grants and migration history; a default schema-only `db dump` is not a complete recovery backup. Encrypt exports, store them off the Mac and outside Git, restrict access and test restoration. Separately inventory Storage/media, provider configuration, domains, webhook endpoints and secrets in an approved password manager.
+
+On October 14, 2026 an encrypted pre-migration export was created and checked against all 57 table row counts; decryption and per-file hashes passed. Its recovery key is stored separately outside Git. An off-machine copy and a full isolated restore drill are still unverified. See [the migration record](docs/MIGRATION_RECORD_2026-10-14.md).
 
 Proposed operating targets, pending owner approval: daily verified backup; recovery drill before launch and quarterly; target at most 24 hours of data loss and four hours to restore. These are goals, not a measured guarantee; tighter requirements may require paid PITR and monitoring. Record the restored appointment count, catalog, roles/RLS, schedule and migration history during the drill.
 

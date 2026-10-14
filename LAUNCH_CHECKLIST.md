@@ -5,13 +5,13 @@ Audit date: October 14, 2026. **Release decision: preview only; public booking i
 ## Before customers can book — P0
 
 - [ ] Verify the Vercel team, project, plan, branch, environment and deployed commit. The project `jaz-it-up-beauty-lounge` is connected to the correct GitHub repository; a visual [Preview is READY](https://jaz-it-up-beauty-lounge-dodschf0i-steves-projects-e37a4ef4.vercel.app), but real booking acceptance remains pending. The repository disables automatic Git deployment in `vercel.json`; retain that rule while blockers remain and create previews explicitly. The current team is on Hobby, so a suitable commercial plan is also required for launch. The unintended Production build was deleted with user approval; the project was resumed with no production deployment. Keep production empty until acceptance.
-- [ ] Back up Supabase, verify migration history, then apply the two pending migrations in order: `20261014184518_communications_and_optional_deposits.sql` and `20261014193528_launch_safety_and_api_limits.sql`. Rehearse on an isolated test database first. The salon project currently has nine migrations through `20261014182155`.
+- [x] Create and verify an encrypted pre-migration export; apply `20261014184518_communications_and_optional_deposits.sql` and `20261014193528_launch_safety_and_api_limits.sql` in order. The salon project now has all 11 migrations and no pending files. See [evidence and backup limitations](docs/MIGRATION_RECORD_2026-10-14.md).
 - [ ] Use an isolated Supabase project for preview acceptance. Never share production service credentials with previews or test runners. Confirm the integration supplied the variable names this app actually reads; linking integrations alone does not apply migrations or provision salon roles.
 - [ ] Set the public Supabase URL/publishable key, server-only `SUPABASE_SECRET_KEY`, HTTPS `NEXT_PUBLIC_SITE_URL`, and random `BOOKING_RATE_LIMIT_SECRET` (32+ characters). Test the database limiter on the actual hosting platform. Keep `PUBLIC_BOOKING_ENABLED=false` outside an approved, protected test deployment.
 - [ ] Provision Delia's own verified Auth identity, grant only her intended salon role, test sign-in/sign-out and revoke the temporary owner's access after handoff. Disable public Auth sign-ups. Resolve the leaked-password-protection advisor warning if supported by the selected plan. Test the documented recovery procedure; this app has no self-service password-reset screen.
 - [ ] Publish real salon phone, email, address, cancellation terms, privacy contact and an approved retention policy. These contact fields are currently blank. Approve each remaining price/duration before making that service instantly bookable; unresolved entries can remain visible for consultation.
 - [ ] Complete the protected preview acceptance script in OPERATIONS: a real guest reservation through the browser and deployed API, conflict/retry checks, signed-in admin management, cancellation/rescheduling, mobile/tablet/keyboard checks. SQL tests do not replace this acceptance.
-- [ ] Verify backups by restoring into an isolated environment. Assign an operator, monitoring recipient and incident contact. Approve a maximum tolerable data-loss and recovery time.
+- [ ] Copy the encrypted backup off this Mac, retain its recovery key separately in a password manager, and verify recovery by restoring into an isolated environment. Assign an operator, monitoring recipient and incident contact. Approve a maximum tolerable data-loss and recovery time.
 - [ ] Delia approves public booking after the evidence above is recorded. Only then enable `PUBLIC_BOOKING_ENABLED=true` in the intended release and verify again. Enable `SITE_INDEXING_ENABLED=true` separately after domain/content approval. Both default false; preview indexing remains disallowed.
 
 ## Optional channels — remain off until separately accepted
@@ -28,7 +28,7 @@ Audit date: October 14, 2026. **Release decision: preview only; public booking i
 | Fresh install / lockfile | PASS | `npm ci`; pinned lockfile; Node 24 in CI. Upstream ESLint peer-range warnings remain. |
 | Types / lint / production build | PASS | Local production build and GitHub Quality checks. |
 | Unit / integration | PASS | 40 TypeScript tests; five PostgreSQL assertion suites replay all migrations in disposable PostgreSQL 17. |
-| Migrations / RLS | PARTIAL | Clean replay passes; 21 existing live tables have RLS. Two migrations are still pending on the salon project. |
+| Migrations / RLS | PASS | Clean replay passed in PostgreSQL 17 CI. All 11 migrations now applied live; all 27 public tables have RLS. Zero anonymous writable tables or client-executable sensitive RPCs. |
 | Customer privacy / guest API | PASS in tests | Tenant RLS, no anonymous table writes, current role authorization, capability checks, origin checks, bounded JSON, no-store API responses. Hosted acceptance pending. |
 | Concurrent booking | PASS | Seven parallel-connection scenarios: slot collision, duplicate retry, buffers, holds, blocks, queue claims and rate limiting. |
 | Chicago time / DST | PASS | Both transitions, invalid/repeated local times, closing buffers and continuous lunch covered. |
@@ -42,7 +42,7 @@ Audit date: October 14, 2026. **Release decision: preview only; public booking i
 | Secrets / dependencies | PARTIAL | Tracked-history pattern scan clean; production dependency audit clean. Five dev-tool advisory entries remain in the unpatched braces chain. Pattern scanning cannot prove absence of every credential type. |
 | Domain / environment | BLOCKED | Production-only Supabase variables exist; preview database, canonical URL and limiter secret are missing. Domain and release acceptance unverified. |
 | Abuse / errors | PASS in tests | Atomic shared rate limits; trusted Vercel IP HMACs; safe error references; closed launch gate. WAF, alerts and distributed-bot defense still need deployment configuration. |
-| Backup / recovery | DOCUMENTED, UNTESTED | Runbook supplied; a real restore drill and owner retention decisions remain required. |
+| Backup / recovery | PARTIAL | Encrypted export created; 57 table counts, decryption and file hashes verified. Off-machine copy, full isolated restore drill and owner retention decisions remain required. |
 
 ## Deferred risks — P1
 
