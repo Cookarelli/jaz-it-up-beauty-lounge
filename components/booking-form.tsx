@@ -1,8 +1,18 @@
 "use client";
 import { useState } from "react";
-import type { Service } from "@/lib/catalog";
-export function BookingForm({ services }: { services: Service[] }) {
-  const [service, setService] = useState(services[0]?.id || "");
+import { formatPrice, type BookingOption } from "@/lib/service-types";
+export function BookingForm({
+  services,
+  initialSelection,
+}: {
+  services: BookingOption[];
+  initialSelection?: string;
+}) {
+  const [service, setService] = useState(
+    services.some((s) => s.id === initialSelection)
+      ? initialSelection!
+      : services[0]?.id || "",
+  );
   const [date, setDate] = useState("");
   const [slots, setSlots] = useState<
     { starts_at: string; stylist_id: string }[]
@@ -16,8 +26,9 @@ export function BookingForm({ services }: { services: Service[] }) {
     setSlot("");
     setSlots([]);
     try {
+      const option = services.find((s) => s.id === service)!;
       const r = await fetch(
-        `/api/availability?service=${service}&date=${date}`,
+        `/api/availability?service=${option.service_id}&date=${date}${option.variant_id ? `&variant=${option.variant_id}` : ""}`,
       );
       const d = await r.json();
       if (!r.ok) throw Error(d.error);
@@ -43,7 +54,8 @@ export function BookingForm({ services }: { services: Service[] }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          service_id: service,
+          service_id: services.find((s) => s.id === service)!.service_id,
+          variant_id: services.find((s) => s.id === service)!.variant_id,
           ...selected,
           name: f.get("name"),
           email: f.get("email"),
@@ -85,7 +97,7 @@ export function BookingForm({ services }: { services: Service[] }) {
             >
               {services.map((s) => (
                 <option key={s.id} value={s.id}>
-                  {s.name} · ${(s.price_cents / 100).toFixed(2)}
+                  {s.name} · {formatPrice(s)}
                 </option>
               ))}
             </select>

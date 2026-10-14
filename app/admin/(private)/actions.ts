@@ -8,19 +8,41 @@ async function requireAdmin() {
   if (!db) throw Error("Unauthorized");
   return db;
 }
-export async function saveService(form: FormData) {
+export async function saveService(
+  _previous: import("@/lib/validation").ServiceFormState,
+  form: FormData,
+): Promise<import("@/lib/validation").ServiceFormState> {
   const db = await requireAdmin();
-  const values = serviceSchema.parse(Object.fromEntries(form));
-  const id = form.get("id");
-  const result = id
-    ? await db
-        .from("services")
-        .update({ ...values, active: form.get("active") === "on" })
-        .eq("id", z.uuid().parse(id))
-    : await db.from("services").insert(values);
-  if (result.error) throw Error("Could not save service");
+  const parsed = serviceSchema.safeParse(Object.fromEntries(form));
+  if (!parsed.success)
+    return {
+      message: "Check the highlighted fields.",
+      errors: parsed.error.flatten().fieldErrors,
+    };
+  const identity = z
+    .object({
+      id: z.uuid(),
+      kind: z.enum(["service", "variant"]),
+      revision: z.coerce.number().int().positive(),
+    })
+    .safeParse(Object.fromEntries(form));
+  if (!identity.success) return { message: "Invalid entry. Reload the page." };
+  const { error } = await db.rpc("edit_catalog_entry", {
+    p_kind: identity.data.kind,
+    p_id: identity.data.id,
+    p_revision: identity.data.revision,
+    p_values: parsed.data,
+  });
+  if (error)
+    return {
+      message: error.message.includes("changed or access")
+        ? "Someone changed this entry. Reload before editing again."
+        : "Could not save. Check values and your salon permissions.",
+    };
   revalidatePath("/admin/services");
   revalidatePath("/services");
+  revalidatePath("/book");
+  return { message: "Saved successfully.", saved: true };
 }
 export async function updateAppointment(form: FormData) {
   const db = await requireAdmin();

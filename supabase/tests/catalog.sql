@@ -1,0 +1,84 @@
+begin;
+-- All synthetic identities, bookings and edits are rolled back at the end.
+do $$ declare service uuid; variant uuid; stylist uuid; salon uuid; booking uuid; held uuid; starts timestamptz; tz text; item public.services; caught boolean; begin
+ select s.id,l.salon_id into stylist,salon from public.stylists s join public.locations l on l.id=s.location_id where s.active limit 1;
+ select timezone into tz from public.salons where id=salon;
+ starts=((current_date+14)::text||' 10:00:00')::timestamp at time zone tz;
+ insert into public.services(salon_id,slug,name,description,category,pricing_type,price_cents,duration_minutes,price_approved,duration_approved,status,preparation_minutes,cleanup_minutes) values(salon,'verification-'||gen_random_uuid(),'Verification only','','EXTRAS','exact',1000,30,true,true,'published',15,15) returning id into service;
+ insert into public.availability(stylist_id,starts_at,ends_at) values(stylist,starts-interval '15 minutes',starts+interval '4 hours');
+ if not exists(select 1 from public.available_slots(service,(starts at time zone tz)::date) where starts_at=starts and stylist_id=stylist) then raise exception 'TEST: approved slot missing'; end if;
+ held=public.create_appointment_hold(service,stylist,starts);
+ if exists(select 1 from public.available_slots(service,(starts at time zone tz)::date) where starts_at=starts and stylist_id=stylist) then raise exception 'TEST: hold did not exclude slot'; end if;
+ booking=public.reserve_appointment(service,stylist,starts,'Verification only','test-'||gen_random_uuid()||'@example.invalid','5550000000',null,held);
+ if (select count(*) from public.notification_jobs where appointment_id=booking)<>2 then raise exception 'TEST: notification events not queued'; end if;
+ if not exists(select 1 from public.appointments a join public.customers c on c.id=a.customer_id where a.id=booking and a.preparation_minutes=15 and a.cleanup_minutes=15 and a.price_cents=1000) then raise exception 'TEST: customer or booking snapshot missing'; end if;
+ caught=false;
+ begin perform public.reserve_appointment(service,stylist,starts+interval '30 minutes','Verification only','test-'||gen_random_uuid()||'@example.invalid','5550000000'); exception when others then caught=true; end;
+ if not caught then raise exception 'TEST: cleanup overlap was accepted'; end if;
+ update public.appointments set status='cancelled' where id=booking;
+ if not exists(select 1 from public.available_slots(service,(starts at time zone tz)::date) where starts_at=starts) then raise exception 'TEST: cancellation did not reopen slot'; end if;
+ insert into public.schedule_exceptions(salon_id,on_date) values(salon,(starts at time zone tz)::date);
+ if exists(select 1 from public.available_slots(service,(starts at time zone tz)::date)) then raise exception 'TEST: closed exception ignored'; end if;
+ delete from public.schedule_exceptions where salon_id=salon and on_date=(starts at time zone tz)::date;
+ insert into public.business_hours(salon_id,weekday,opens_at,closes_at) values(salon,extract(dow from starts at time zone tz), '12:00','14:00') on conflict(salon_id,weekday) do update set opens_at='12:00',closes_at='14:00';
+ if exists(select 1 from public.available_slots(service,(starts at time zone tz)::date) where starts_at=starts) then raise exception 'TEST: business hours ignored'; end if;
+ delete from public.business_hours where salon_id=salon;
+ update public.services set duration_approved=false where id=service;
+ if exists(select 1 from public.available_slots(service,(starts at time zone tz)::date)) then raise exception 'TEST: unapproved duration is bookable'; end if;
+ update public.services set duration_approved=true,price_approved=false where id=service;
+ if exists(select 1 from public.available_slots(service,(starts at time zone tz)::date)) then raise exception 'TEST: unapproved price is bookable'; end if;
+ update public.services set price_approved=true where id=service;
+ insert into public.service_variants(salon_id,service_id,slug,name,description,category,pricing_type,price_cents,duration_minutes,price_approved,duration_approved,status) values(salon,service,'verification','Verification variant','','EXTRAS','starting',1200,45,true,true,'published') returning id into variant;
+ if exists(select 1 from public.available_slots(service,(starts at time zone tz)::date)) then raise exception 'TEST: parent with variants is bookable'; end if;
+ if not exists(select 1 from public.available_slots(service,(starts at time zone tz)::date,variant)) then raise exception 'TEST: approved variant missing'; end if;
+ caught=false;begin update public.booking_policies set payments_enabled=true where salon_id=salon; exception when check_violation then caught=true; end;
+ if not caught then raise exception 'TEST: payments enabled'; end if;
+ perform set_config('test.service',service::text,true);perform set_config('test.variant',variant::text,true);perform set_config('test.salon',salon::text,true);
+end $$;
+-- Establish isolated test Auth users, one authorized and one unprivileged.
+with u as(insert into auth.users(id,email) values(gen_random_uuid(),'owner-'||gen_random_uuid()||'@example.invalid') returning id) select set_config('test.owner',(select id::text from u),true);
+insert into public.staff_roles(salon_id,user_id,role) values(current_setting('test.salon')::uuid,current_setting('test.owner')::uuid,'owner');
+with u as(insert into auth.users(id,email) values(gen_random_uuid(),'outsider-'||gen_random_uuid()||'@example.invalid') returning id) select set_config('test.outsider',(select id::text from u),true);
+do $$ declare other_salon uuid; other_service uuid; begin
+ insert into public.salons(name) values('Temporary second salon') returning id into other_salon;
+ insert into public.services(salon_id,slug,name,description,category,price_cents,duration_minutes) values(other_salon,'tenant-isolation','Other salon draft','','EXTRAS',1000,30) returning id into other_service;
+ perform set_config('test.other_service',other_service::text,true);
+end $$;
+select set_config('request.jwt.claim.sub',current_setting('test.owner'),true);
+set local role authenticated;
+do $$ declare s public.services; v integer; caught boolean=false; begin
+ if exists(select 1 from public.services where id=current_setting('test.other_service')::uuid) then raise exception 'TEST: cross-salon access';end if;
+ begin insert into public.staff_roles(salon_id,user_id,role) values(current_setting('test.salon')::uuid,current_setting('test.outsider')::uuid,'owner');exception when insufficient_privilege then caught=true;end;
+ if not caught then raise exception 'TEST: client role escalation accepted';end if;
+ caught=false;
+ select * into strict s from public.services where id=current_setting('test.service')::uuid;
+ v=public.edit_catalog_entry('service',s.id,s.revision,(to_jsonb(s)-array['id','salon_id','slug','category','active','includes_cut_style','revision'])||jsonb_build_object('name','Owner edited service'));
+ if v<>s.revision+1 then raise exception 'TEST: revision did not increment'; end if;
+ begin perform public.edit_catalog_entry('service',s.id,s.revision,to_jsonb(s)-array['id','salon_id','slug','category','active','includes_cut_style','revision']);exception when others then caught=true;end;
+ if not caught then raise exception 'TEST: stale edit accepted';end if;
+ if not exists(select 1 from public.audit_logs where entity_id=s.id and action='UPDATE') then raise exception 'TEST: audit event missing';end if;
+end $$;
+reset role;
+select set_config('request.jwt.claim.sub',current_setting('test.outsider'),true);
+set local role authenticated;
+do $$ declare caught boolean=false;begin
+ if exists(select 1 from public.services) or exists(select 1 from public.customers) or exists(select 1 from public.appointments) or exists(select 1 from public.audit_logs) then raise exception 'TEST: outsider accessed private records';end if;
+ begin insert into public.services(salon_id,slug,name,description,category,price_cents,duration_minutes) values(current_setting('test.salon')::uuid,'bad','Bad insert','','EXTRAS',100,15);exception when insufficient_privilege then caught=true;end;
+ if not caught then raise exception 'TEST: outsider catalog insert accepted';end if;
+end $$;
+reset role;
+set local role anon;
+do $$ declare caught boolean;begin
+ if not exists(select id from public.services where id=current_setting('test.service')::uuid) then raise exception 'TEST: public catalog inaccessible';end if;
+ caught=false;begin perform admin_notes from public.services;exception when insufficient_privilege then caught=true;end;
+ if not caught then raise exception 'TEST: anonymous private notes exposed';end if;
+ caught=false;begin perform id from public.appointments;exception when insufficient_privilege then caught=true;end;
+ if not caught then raise exception 'TEST: anonymous clients exposed';end if;
+ caught=false;begin insert into public.services(salon_id,slug,name,description,category,price_cents,duration_minutes) values(current_setting('test.salon')::uuid,'bad','Bad insert','','EXTRAS',100,15);exception when insufficient_privilege then caught=true;end;
+ if not caught then raise exception 'TEST: anonymous writes allowed';end if;
+ caught=false;begin perform public.reserve_appointment(current_setting('test.service')::uuid,gen_random_uuid(),now(),'Test','test@example.invalid','5550000000');exception when insufficient_privilege then caught=true;end;
+ if not caught then raise exception 'TEST: anonymous reservation RPC allowed';end if;
+end $$;
+reset role;
+rollback;
+select 'Database catalog, bookings, buffers, holds, RLS, audit, stale edits and disabled payments passed; fixtures rolled back.' as result;

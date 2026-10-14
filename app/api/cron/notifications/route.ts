@@ -19,14 +19,23 @@ export async function GET(req: Request) {
   let sent = 0;
   for (const job of data || []) {
     try {
+      await db
+        .from("notification_events")
+        .insert({ job_id: job.id, event_type: "attempted" });
       await new WebhookAdapter().send(job);
       const { error } = await db
         .from("notification_jobs")
         .update({ sent_at: new Date().toISOString(), locked_until: null })
         .eq("id", job.id);
       if (error) throw error;
+      await db
+        .from("notification_events")
+        .insert({ job_id: job.id, event_type: "delivered" });
       sent++;
     } catch {
+      await db
+        .from("notification_events")
+        .insert({ job_id: job.id, event_type: "failed" });
       await db
         .from("notification_jobs")
         .update({ locked_until: new Date(Date.now() + 300000).toISOString() })

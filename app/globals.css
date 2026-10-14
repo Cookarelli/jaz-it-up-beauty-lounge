@@ -445,3 +445,28 @@ summary {
     white-space: nowrap;
   }
 }
+
+textarea {
+  font: inherit;
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #929e91;
+  min-height: 90px;
+  background: #fffdf8;
+}
+input[type="checkbox"] {
+  width: auto;
+  margin-right: 8px;
+}
+details.card {
+  margin-bottom: 16px;
+}
+details.card > summary {
+  font-weight: 600;
+  padding: 8px 0;
+}
+.offering + .offering {
+  border-top: 1px solid #ddd;
+  margin-top: 20px;
+  padding-top: 20px;
+}

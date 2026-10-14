@@ -1,17 +1,27 @@
 import { Intro } from "@/components/site";
 import { BookingForm } from "@/components/booking-form";
 import { catalog } from "@/lib/catalog";
+import { bookingOptions } from "@/lib/service-types";
 import { env } from "@/lib/env";
 export const metadata = { title: "Book an appointment" };
-export default async function Book() {
+export default async function Book({
+  searchParams,
+}: {
+  searchParams: Promise<{ service?: string; variant?: string }>;
+}) {
+  const selected = await searchParams;
   const { services, live } = await catalog();
+  const options = bookingOptions(services);
   return (
     <section className="narrow">
       <Intro eyebrow="TIME JUST FOR YOU" title="Let’s book your visit.">
         Choose your service and a time that works for you. No account needed.
       </Intro>
-      {live && env.SUPABASE_SECRET_KEY ? (
-        <BookingForm services={services} />
+      {live && env.SUPABASE_SECRET_KEY && options.length > 0 ? (
+        <BookingForm
+          services={options}
+          initialSelection={selected.variant || selected.service}
+        />
       ) : (
         <div className="notice">
           <h2>Online booking is coming soon</h2>

@@ -1,10 +1,10 @@
 # Jaz It Up Beauty Lounge
 
-Next.js App Router application for Delia: a responsive public salon website, guest booking, and private Supabase-authenticated management.
+Next.js App Router, TypeScript, Tailwind, Supabase Auth/Postgres, and Vercel-ready deployment. Public customers do not need accounts. Payments remain disabled by a database constraint.
 
-## Local setup (including Mac Mini)
+## Local development / Mac Mini
 
-Install Node.js 24 LTS (Node 22.23+ also works), Git, and a code editor. On a Mac Mini, install Xcode Command Line Tools with `xcode-select --install`; install Node from nodejs.org or your preferred version manager. In this project directory:
+Install Node 24 LTS and Git. On a Mac Mini, install Xcode Command Line Tools (`xcode-select --install`), then Node from nodejs.org or a version manager. From the repository root:
 
 ```sh
 npm ci
@@ -12,7 +12,7 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Open http://localhost:3000. The public site runs without credentials; booking and admin fail closed. Never commit `.env.local`, secrets, or client records. Keep the Mac awake during development; Vercel hosts the live website, so the Mac need not remain on after deployment.
+Open http://localhost:3000. Local development needs the Mac awake; Vercel hosting does not. Fill the project URL and publishable key in `.env.local`. Guest reservation APIs additionally require the server-only `SUPABASE_SECRET_KEY`. Never prefix that key with NEXT_PUBLIC or commit environment files. Without a configured backend the public menu uses the owner-supplied seed snapshot and booking fails closed.
 
 ```sh
 npm run lint
@@ -22,46 +22,59 @@ npm run build
 npm start
 ```
 
-## Supabase setup
+## Migrations and seed
 
-Use an existing project or create one manually after reviewing its plan. No cloud resources are automatically provisioned. Run `supabase/bootstrap.sql` once in a NEW project SQL editor. It creates tables, RLS policies, explicit grants, service-role-only booking/queue RPCs, a location, and Delia’s stylist entry. It intentionally seeds no services or customers. This is an initial SQL bootstrap, not an applied migration; adopt Supabase CLI migrations for subsequent changes.
+The configured Supabase project is `fwxothhjxtvuupyeqsri`, named Jaz It Up, in OptAImal LLC. All six tracked migrations have been applied there. **Do not rerun the historical bootstrap or execute applied migrations again.** `supabase/migrations` is the canonical schema history.
 
-Set the Supabase URL, publishable key and server-only secret key in `.env.local`. Create Delia’s Auth user manually, disable public signups, configure password recovery/SMTP in Supabase, and insert that Auth UUID into `salon_admins` through the SQL editor. Membership table policies restrict users to their own membership; arbitrary authenticated users have no management rights. Service-role keys are used only in server modules.
+For another empty Supabase project, apply every migration in filename order through Supabase migration tooling. For an existing project at the previous main commit, apply only the four new migrations beginning `20261014165914`, after checking migration history and taking a backup. They expand the schema, preserve existing location/stylist and appointment IDs, backfill customer links and booking snapshots, and never delete client records. The final migration audits operational changes without copying client contact details into audit logs.
 
-Sign in at `/admin/login`, add actual services and prices, then publish availability at `/admin/availability`. Enter timestamps with explicit offsets. Availability is offered at 30-minute intervals, at least two hours ahead, up to 90 days ahead. Current salon timezone is America/Chicago; confirm it with Delia before launch. Calendar boundaries handle daylight saving changes.
+`20261014170150_seed_owner_service_menu.sql` installs the owner-supplied board. `supabase/seed.sql` provides the same idempotent seed for development. Natural-key conflict handling never overwrites Delia’s later edits. No customers, Auth users, appointments, business hours, phone numbers or real client data are seeded. Buffers default to zero as an explicit configurable scheduling default, not an assertion about salon preparation time.
 
-## Architecture
+The seed has **23 services and 15 variants** across CUTS, WAXING, COLOR, PERMS and EXTRAS. Men’s/women’s adult haircut variants retain the $20–$30 board range with their supplied 30/60-minute durations; Delia must set individual prices. TBD or provisional durations stay unapproved. Perm variants cover above-shoulder, shoulder, and below-shoulder lengths with the supplied approximate 90–120-minute range; no exact time or length surcharge is invented. Brazilian blowout variants use the supplied $150/$200 prices and 120 minutes. Pins/braids remains unapproved because “up to 60 minutes” is not a confirmed exact duration. All color, perm and Brazilian chemical bundles include haircut/style once.
 
-- `app/`: server-rendered customer pages, booking APIs, login, private admin route group.
-- `components/`: shared site UI, booking form and catalog form fields.
-- `lib/`: validation, environment, Supabase, salon date calculations, notification adapter.
-- `supabase/bootstrap.sql`: initial relational schema and transaction functions.
-- `tests/`: input validation and daylight-saving regression tests.
+## Schema and access
 
-Locations own stylists; availability and appointments belong to stylists. Services are shared by the salon for now. Add location/stylist-specific offerings only when needed. Appointments snapshot price; the exclusion constraint prevents overlapping active appointments even under concurrent requests. Booking and notification jobs commit atomically. Removing hours does not cancel existing appointments. Staff can mark appointments cancelled or completed; rescheduling currently means cancelling and booking a new time.
+- `salons`, `locations`: salon ownership, locations and timezone. Existing location IDs remain intact.
+- `staff`, `stylists`, `staff_roles`: staff profiles, preserved bookable stylist IDs, and salon-scoped Auth membership. Roles are owner, manager and stylist; only owner/manager roles administer the salon.
+- `services`, `service_variants`: exact/starting/range/consultation integer-cent pricing, nullable exact timing, approximate timing bounds, independent approvals, status, length, ordering, buffers, private notes and optimistic revisions.
+- `business_hours`, `schedule_exceptions`, `availability`: general opening hours, dated closures/restrictions and explicitly published stylist windows. No opening hours are fabricated. Until general hours are configured, published availability is the explicit owner-controlled schedule. Exceptions restrict these windows; they do not silently add hours outside availability.
+- `appointment_holds`, `appointments`, `customers`: expiring opaque holds, immutable booking snapshots, contact details and buffered scheduling checks. Holds/reservations use per-stylist transaction locks; appointments also retain their database exclusion constraint.
+- `notification_jobs`, `notification_events`: transactional outbox, leased retries and delivery-attempt records.
+- `audit_logs`: append-only metadata (actor, entity, operation, revision); no copied client contact or notification payloads.
+- `booking_policies`: lead time, horizon, slot spacing, hold timeout, cancellation configuration and future deposit options. Payments cannot be enabled in this release, including through direct SQL updates under application roles.
 
-## Notifications
+RLS is enabled on every table. Anonymous users can read only explicit public columns of published services/variants, never private admin notes. Authenticated non-staff users have no client or management access. Role assignment is SQL/operator-only; clients cannot grant themselves membership. Server-only holds/notification tables intentionally have no client RLS policies. Security advisors report this as informational. No unauthenticated role has direct table writes or booking RPC execution.
 
-`NotificationAdapter` is the provider boundary. `WebhookAdapter` sends authenticated JSON with an idempotency key to an operator-controlled email/SMS delivery service. Configure URL and bearer token, and a random CRON_SECRET of at least 32 characters. The receiver must deduplicate by job ID, deliver transactional messages, and treat all payloads as confidential. No provider is provisioned or billed by this repository.
+## Delia’s admin access and service editing
 
-Call `GET /api/cron/notifications` using `Authorization: Bearer <CRON_SECRET>` from a trusted scheduler every few minutes. Configure a Vercel Cron schedule only after checking plan frequency limits, or use another scheduler. Jobs use five-minute leases, retry up to ten attempts, and skip cancelled appointments. Monitor exhausted jobs in Supabase and reconcile provider receipts before resetting attempts. Delivery is at least once; receiver idempotency is mandatory. The webhook should include service name and local time in its templates using the reference if needed. Without an adapter or scheduler, reservations save but email/reminders do not send.
+Create Delia’s Supabase Auth user manually, disable public signups, configure password recovery/SMTP, then grant membership using her actual Auth UUID:
 
-## Vercel deployment
+```sql
+insert into public.staff_roles(salon_id,user_id,staff_id,role)
+select s.salon_id,'<DELIA_AUTH_UUID>'::uuid,s.id,'owner'
+from public.staff s where s.name='Delia';
+```
 
-Import `Cookarelli/jaz-it-up-beauty-lounge`, select Next.js, use Node 24, and configure the environment variables in the intended environment. Set NEXT_PUBLIC_SITE_URL to the canonical HTTPS origin. Keep preview and production databases separate. Add the domain and enable HTTPS. No Vercel resources have been created automatically. Validate Supabase Auth site URL and redirects against the final domain. Admin responses are private/no-store.
+Use `/admin/login`, then `/admin/services`. Expand a service or variant, configure the exact or starting price and exact duration, and explicitly approve both. Board ranges and consultation prices remain non-bookable. Draft and archived entries are hidden from the public catalog. Published entries needing review remain visible. Archive instead of deleting to preserve history. The editor validates blank versus zero, integer cents, bounds, duration ranges and buffers. A transaction checks the submitted revision and rejects stale edits; all changes append audit metadata. Catalog identity, parent, category and chemical bundle metadata are protected from this editor.
 
-Before accepting customers: confirm address, phone, business hours, timezone, actual services/prices, cancellation policy, final privacy notice and retention process; replace gallery placeholders with licensed, consented photos in `public/images`; configure and verify notifications. No salon photos were supplied. Typography is a wordmark treatment, not a claimed supplied logo.
+The legacy `salon_admins` table is retained for compatibility with old installations; migration copies its existing memberships into staff_roles. New members must use staff_roles. Existing admin actions authenticate and authorize each mutation, independently of route protection.
 
-## Verification and launch requirements
+## Automated database tests
 
-Automated local checks cover lint, TypeScript, build, input validation and DST. With a real Supabase project, run the SQL and verify guest booking, a simultaneous same-slot race (only one succeeds), slot removal, cancellation, notification retries/idempotency and denial of anonymous/non-admin access to customer data. Database execution and live notification delivery cannot be verified without credentials. Run Supabase security advisors after applying SQL.
+`supabase/tests/catalog.sql` is a transactional assertion suite covering public/private RLS, writes, private notes, owner edits, optimistic concurrency, approval gates, variant routing, holds, buffers, cancellations, hours, exceptions, snapshots, notifications, auditing and disabled payments. Synthetic identities and bookings are rolled back.
 
-Booking includes same-origin checks, request validation, a honeypot and a database-backed per-email cooldown. Before public launch configure platform rate limits/bot protection; the email cooldown alone does not prevent distributed booking abuse. There is no customer self-service cancellation link yet. Optional deposits/payments should later use a separate payment adapter and verified provider webhooks; no payment information is collected now.
+```sh
+TEST_DATABASE_URL=postgres://postgres:postgres@localhost:5432/salon_test npm run test:db
+```
 
-## Dependency audit
+Use a disposable database. On an empty PostgreSQL 17 test database, the runner installs a minimal Auth/role compatibility fixture and replays every migration before running assertions. Existing test schemas are tested without replay. GitHub CI includes a PostgreSQL service for a clean replay; no Supabase credentials are needed. The fixture is test-only and must never be installed into a live Supabase project. Validation tests also assert all 23 services, 15 variants, supplied prices, owner-review flags, chemical bundles, labels and daylight-saving behavior. Live SQL tests have passed on the salon project with fixtures rolled back. Full simultaneous-request load testing and a signed-in browser test still require runtime credentials and an admin user.
 
-Production dependency audit: zero known vulnerabilities at verification time. Full audit reports five high-severity entries in the development-only `eslint-config-next → fast-glob → micromatch → braces` chain (GHSA-vfj7-8cjw-p6xm). The registry offers no patched stable braces release at verification time; npm suggests an inappropriate Next lint-config downgrade. Do not feed untrusted glob patterns to lint tooling. Recheck upstream before release.
+## Notifications and deployment
 
-## Connected salon project
+`NotificationAdapter` is the provider boundary. Configure `NOTIFICATION_WEBHOOK_URL`, `NOTIFICATION_WEBHOOK_TOKEN`, and a random `CRON_SECRET` of at least 32 characters. The receiver must deduplicate by the job’s Idempotency-Key and deliver transactional messages. Call `/api/cron/notifications` using `Authorization: Bearer <CRON_SECRET>` from a trusted scheduler. Jobs use five-minute leases and at most ten attempts; cancelled appointments are skipped. Events record attempted/delivered/failed outcomes. Delivery is at least once. No messaging provider is provisioned automatically.
 
-The initial schema is now installed in project `fwxothhjxtvuupyeqsri` (Jaz It Up, OptAImal LLC). Do not rerun the bootstrap against this project. It contains one salon location and Delia’s stylist record, but no client appointments or published services. The local ignored `.env.local` contains the project URL and publishable key; runtime booking still requires SUPABASE_SECRET_KEY. Create Delia’s Auth user and add her UUID to salon_admins before using management. Live SQL checks passed for reservation, notification enqueueing, duplicate-slot rejection and cancellation; all synthetic records were rolled back. The notification queue intentionally has no client RLS policies and is accessed only by server credentials.
+For Vercel, import the repository, select Next.js/Node 24, set environment variables and the canonical HTTPS NEXT_PUBLIC_SITE_URL, then deploy. Keep preview/production databases separate. Configure Auth site URL/redirects, notification scheduling and rate limiting/bot protection. Confirm address, phone, hours, actual policies, service approvals, and privacy retention before launch. No hosting deployment is claimed by this repository update. There is no payment processing, customer account requirement, or customer self-service cancellation link.
+
+## Dependencies
+
+Production audit is clean at the previous verification. The full audit has five development-only entries in Next’s lint-tooling braces chain; no patched stable braces release was available. ESLint 10 runs the checks, though upstream lint plugins still declare older peer ranges, so npm prints peer warnings. Recheck these upstream advisories before launch. Keep the lockfile pinned.

@@ -23,6 +23,7 @@ export async function POST(req: Request) {
       "reserve_appointment",
       {
         p_service: b.service_id,
+        p_variant: b.variant_id ?? null,
         p_stylist: b.stylist_id,
         p_start: b.starts_at,
         p_name: b.name,

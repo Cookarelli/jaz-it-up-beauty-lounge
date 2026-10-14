@@ -39,10 +39,6 @@ export async function adminClient() {
     data: { user },
   } = await db.auth.getUser();
   if (!user) return null;
-  const { data } = await db
-    .from("salon_admins")
-    .select("user_id")
-    .eq("user_id", user.id)
-    .maybeSingle();
-  return data ? db : null;
+  const { data } = await db.rpc("is_salon_admin");
+  return data === true ? db : null;
 }

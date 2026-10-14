@@ -1,38 +1,83 @@
+export const dynamic = "force-dynamic";
 import { Intro, Button } from "@/components/site";
 import { catalog } from "@/lib/catalog";
+import {
+  categories,
+  formatPrice,
+  formatDuration,
+  bookable,
+  type Service,
+} from "@/lib/service-types";
 export const metadata = { title: "Services" };
+function Offering({
+  s,
+  parentId,
+  live,
+}: {
+  s: Service;
+  parentId?: string;
+  live: boolean;
+}) {
+  return (
+    <div className="offering">
+      <h3>{s.name}</h3>
+      <p>
+        {formatPrice(s)} · {formatDuration(s)}
+      </p>
+      {s.length_qualification !== "any" && (
+        <p>Hair length: {s.length_qualification.replaceAll("_", " ")}</p>
+      )}
+      {live && bookable(s) ? (
+        <Button
+          secondary
+          href={`/book?service=${parentId || s.id}${parentId ? `&variant=${s.id}` : ""}`}
+        >
+          Choose this service
+        </Button>
+      ) : (
+        <p className="muted">
+          {s.variants?.length
+            ? "Choose a variant below."
+            : "Owner review required · ask the salon before booking."}
+        </p>
+      )}
+    </div>
+  );
+}
 export default async function Services() {
   const { services, live } = await catalog();
   return (
     <section>
       <Intro eyebrow="A LITTLE SOMETHING FOR YOU" title="The service menu">
-        Find your fresh start. Every appointment begins with a conversation
-        about your hair and your goals.
+        Explore the salon menu. Starting prices may vary with the consultation;
+        board ranges are shown as supplied.
       </Intro>
-      {!live && (
-        <p className="notice">
-          An introduction to our services. Delia’s confirmed menu and pricing
-          will appear here before booking opens.
-        </p>
-      )}
-      <div className="cards">
-        {services.map((s) => (
-          <article className="card" key={s.id}>
-            <span className="eyebrow">{s.category}</span>
-            <h2>{s.name}</h2>
-            <p>{s.description}</p>
-            {live && (
-              <p>
-                {s.duration_minutes} minutes · $
-                {(s.price_cents / 100).toFixed(2)}
-              </p>
-            )}
-            <Button secondary href={`/book?service=${s.id}`}>
-              Choose this service
-            </Button>
-          </article>
-        ))}
-      </div>
+      <p className="notice">
+        All chemical services include haircut and style in one appointment.
+        Services awaiting price or timing approval remain visible, but cannot be
+        booked instantly.
+      </p>
+      {categories.map((category) => (
+        <div key={category}>
+          <h2>{category}</h2>
+          <div className="cards">
+            {services
+              .filter((s) => s.category === category)
+              .map((s) => (
+                <article className="card" key={s.id}>
+                  <Offering s={s} live={live} />
+                  <p>{s.description}</p>
+                  {s.includes_cut_style && (
+                    <strong>Haircut & style included</strong>
+                  )}
+                  {s.variants?.map((v) => (
+                    <Offering key={v.id} s={v} parentId={s.id} live={live} />
+                  ))}
+                </article>
+              ))}
+          </div>
+        </div>
+      ))}
     </section>
   );
 }
