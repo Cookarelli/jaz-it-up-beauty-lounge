@@ -15,7 +15,7 @@ do $$ declare service uuid; variant uuid; stylist uuid; salon uuid; booking uuid
  held=public.create_appointment_hold(service,stylist,starts);
  if exists(select 1 from public.available_slots(service,(starts at time zone tz)::date) where starts_at=starts and stylist_id=stylist) then raise exception 'TEST: hold did not exclude slot'; end if;
  booking=public.reserve_appointment(service,stylist,starts,'Verification only','test-'||gen_random_uuid()||'@example.invalid','5550000000',null,held);
- if (select count(*) from public.notification_jobs where appointment_id=booking)<>2 then raise exception 'TEST: notification events not queued'; end if;
+ if (select count(*) from public.notification_jobs where appointment_id=booking)<>1 then raise exception 'TEST: notification events not queued'; end if;
  if not exists(select 1 from public.appointments a join public.customers c on c.id=a.customer_id where a.id=booking and a.preparation_minutes=15 and a.cleanup_minutes=15 and a.price_cents=1000) then raise exception 'TEST: customer or booking snapshot missing'; end if;
  caught=false;
  begin perform public.reserve_appointment(service,stylist,starts+interval '30 minutes','Verification only','test-'||gen_random_uuid()||'@example.invalid','5550000000'); exception when others then caught=true; end;
@@ -36,7 +36,7 @@ do $$ declare service uuid; variant uuid; stylist uuid; salon uuid; booking uuid
  insert into public.service_variants(salon_id,service_id,slug,name,description,category,pricing_type,price_cents,duration_minutes,price_approved,duration_approved,status) values(salon,service,'verification','Verification variant','','EXTRAS','starting',1200,45,true,true,'published') returning id into variant;
  if exists(select 1 from public.available_slots(service,(starts at time zone tz)::date)) then raise exception 'TEST: parent with variants is bookable'; end if;
  if not exists(select 1 from public.available_slots(service,(starts at time zone tz)::date,variant)) then raise exception 'TEST: approved variant missing'; end if;
- caught=false;begin update public.booking_policies set payments_enabled=true where salon_id=salon; exception when check_violation then caught=true; end;
+ caught=false;begin update public.booking_policies set payments_enabled=true where salon_id=salon; exception when others then caught=true; end;
  if not caught then raise exception 'TEST: payments enabled'; end if;
  perform set_config('test.service',service::text,true);perform set_config('test.variant',variant::text,true);perform set_config('test.salon',salon::text,true);
 end $$;

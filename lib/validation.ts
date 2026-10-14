@@ -6,6 +6,10 @@ const nullableInt = (min: number, max: number) =>
   );
 const checkbox = z.preprocess((v) => v === true || v === "on", z.boolean());
 export const bookingSchema = z.object({
+  request_id: z.uuid(),
+  access_token: z.string().regex(/^[a-f0-9]{64}$/),
+  email_reminders_consent: z.boolean().default(false),
+  sms_consent: z.boolean().default(false),
   service_id: z.uuid(),
   variant_id: z.uuid().nullable().optional(),
   stylist_id: z.uuid(),

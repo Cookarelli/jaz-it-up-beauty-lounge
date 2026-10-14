@@ -81,7 +81,7 @@ export default async function Settings() {
           <AdminForm
             key={p.revision}
             action={savePolicy}
-            confirm="Save these booking and cancellation policies? Deposits will remain disabled."
+            confirm="Save these booking and cancellation policies?"
           >
             <input type="hidden" name="revision" value={p.revision} />
             <Field
@@ -125,27 +125,17 @@ export default async function Settings() {
               value={p.cancellation_text}
               max={3000}
             />
-            <h4>Future deposits</h4>
-            <p className="notice">
-              Payments are disabled. These settings store a future policy and do
-              not charge customers or collect deposits.
-            </p>
-            <label>
-              Deposit type
-              <select name="deposit_type" defaultValue={p.deposit_type}>
-                <option value="none">None</option>
-                <option value="fixed">Fixed amount</option>
-                <option value="percent">Percentage</option>
-              </select>
-            </label>
-            <Field
+            <input type="hidden" name="deposit_type" value={p.deposit_type} />
+            <input
+              type="hidden"
               name="deposit_value"
-              label="Deposit: cents for fixed / percent for percentage / blank for none"
-              type="number"
-              value={p.deposit_value}
-              min={0}
-              max={1000000}
+              value={p.deposit_value ?? ""}
             />
+            <p>
+              <Link href="/admin/payments">
+                Manage optional deposits and refund terms →
+              </Link>
+            </p>
           </AdminForm>
         </article>
       </div>

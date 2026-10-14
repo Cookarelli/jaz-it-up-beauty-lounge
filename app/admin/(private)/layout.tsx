@@ -33,6 +33,8 @@ export default async function AdminLayout({
           ["Hours & time off", "/admin/availability"],
           ["Services", "/admin/services"],
           ["Salon & policies", "/admin/settings"],
+          ["Communications", "/admin/communications"],
+          ["Payments", "/admin/payments"],
           ["Reports", "/admin/reports"],
           ["Change history", "/admin/history"],
         ].map(([label, url]) => (

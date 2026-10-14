@@ -18,3 +18,11 @@ Story: an authorized salon owner signs in, manages appointments/customers/hours/
 - Availability intersects working/business/special hours before checking the full buffered interval. Exact gap boundaries allow adjacent services outside the regular start grid.
 - Added SQL scheduling regression coverage and a 24th TypeScript test for local opening times around spring/autumn DST. Catalog tests now use an isolated salon rather than depending on the owner’s working week.
 - Local lint, typecheck, all 24 unit tests and production build pass. Live read-only checks confirm the five configured days, lunchtime availability and unchanged appointment/manual-block counts.
+
+## Communications and optional deposits
+
+Story: guest booking creates either a confirmed no-deposit appointment or a bounded Checkout hold; signed Stripe events confirm paid bookings atomically. Appointment changes create private, consent-aware delivery jobs, and scheduled provider adapters persist acceptance/delivery/retry history. Owner controls and logs remain protected by Auth and tenant RLS.
+
+- All delivery and payment switches default off. Tests use synthetic records and fake transports; no real messages or cards.
+- Added 11 provider/configuration/template/capability/payment tests (35 total unit tests), plus a transactional database workflow suite.
+- Local lint, TypeScript, unit tests and production build pass. Production dependency audit reports zero vulnerabilities. Provider credentials, deployed scheduler and live/sandbox provider acceptance are not claimed.

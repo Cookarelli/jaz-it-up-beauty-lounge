@@ -182,15 +182,13 @@ export async function saveHours(
       kind === "working"
         ? { stylist_id: z.uuid().parse(form.get("stylist_id")) }
         : {};
-    const { error } = await db
-      .from(table)
-      .upsert(
-        { ...values, ...extra, salon_id: salon.id },
-        {
-          onConflict:
-            kind === "working" ? "stylist_id,weekday" : "salon_id,weekday",
-        },
-      );
+    const { error } = await db.from(table).upsert(
+      { ...values, ...extra, salon_id: salon.id },
+      {
+        onConflict:
+          kind === "working" ? "stylist_id,weekday" : "salon_id,weekday",
+      },
+    );
     check(error);
     refresh();
     return {
@@ -238,15 +236,13 @@ export async function addClosure(
     const stylist = z
       .union([z.uuid(), z.literal("")])
       .parse(form.get("stylist_id"));
-    const r = await db
-      .from("schedule_exceptions")
-      .insert({
-        ...v,
-        salon_id: salon.id,
-        stylist_id: stylist || null,
-        opens_at: v.closed ? null : v.opens_at,
-        closes_at: v.closed ? null : v.closes_at,
-      });
+    const r = await db.from("schedule_exceptions").insert({
+      ...v,
+      salon_id: salon.id,
+      stylist_id: stylist || null,
+      opens_at: v.closed ? null : v.opens_at,
+      closes_at: v.closed ? null : v.closes_at,
+    });
     check(r.error);
     refresh();
     return { message: "Special hours saved.", saved: true };
@@ -336,7 +332,7 @@ export async function savePolicy(
     refresh();
     return {
       message:
-        "Policies saved. Deposits remain a future policy only; payments are disabled.",
+        "Booking policies saved. Deposit activation is managed under Payments.",
       saved: true,
     };
   } catch (e) {

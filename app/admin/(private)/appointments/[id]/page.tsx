@@ -70,6 +70,14 @@ export default async function AppointmentDetail({
               Customer & appointment history →
             </Link>
           )}
+          <p>
+            <Link href="/admin/payments">Deposit and payment records →</Link>
+          </p>
+          <p>
+            <Link href="/admin/communications">
+              Message delivery and consent →
+            </Link>
+          </p>
           <p className="muted">Reference: {a.id}</p>
         </article>
         <div className="card">

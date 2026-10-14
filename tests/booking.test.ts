@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import { bookingSchema, serviceSchema } from "../lib/validation";
 import { salonDayBounds } from "../lib/time";
 const valid = {
+  request_id: "09669911-d83b-4bca-ae49-c3b4ce7dfc70",
+  access_token: "a".repeat(64),
   service_id: "c68dfdab-1ee9-4a19-82b2-87d8acbb5a64",
   stylist_id: "8d243302-42a6-42f3-8cf9-39f63ea9114e",
   starts_at: "2026-11-10T10:00:00-06:00",

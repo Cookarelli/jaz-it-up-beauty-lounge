@@ -1,65 +1,31 @@
 import { env } from "@/lib/env";
+import { secureEqual } from "@/lib/capabilities";
 import { privilegedClient } from "@/lib/supabase";
-import { WebhookAdapter } from "@/lib/notifications";
+import { processNotifications } from "@/lib/notifications";
+export const runtime = "nodejs";
+export const maxDuration = 300;
 export async function GET(req: Request) {
   if (
     !env.CRON_SECRET ||
-    req.headers.get("authorization") !== `Bearer ${env.CRON_SECRET}`
+    !secureEqual(
+      req.headers.get("authorization") || "",
+      `Bearer ${env.CRON_SECRET}`,
+    )
   )
     return Response.json({ error: "Unauthorized" }, { status: 401 });
-  if (!env.NOTIFICATION_WEBHOOK_URL || !env.NOTIFICATION_WEBHOOK_TOKEN)
+  try {
+    const { error } = await privilegedClient().rpc("expire_checkouts");
+    if (error) throw error;
+    return Response.json(await processNotifications(), {
+      headers: { "Cache-Control": "no-store" },
+    });
+  } catch {
     return Response.json(
-      { error: "Notification adapter is not configured" },
+      {
+        error:
+          "Scheduled processing failed; retry and inspect the admin delivery log.",
+      },
       { status: 503 },
     );
-  const db = privilegedClient();
-  const { data, error } = await db.rpc("claim_notifications");
-  if (error)
-    return Response.json({ error: "Queue unavailable" }, { status: 503 });
-  let sent = 0;
-  for (const job of data || []) {
-    try {
-      const current = await db
-        .from("notification_jobs")
-        .select("generation,sent_at,appointments!inner(status)")
-        .eq("id", job.id)
-        .single();
-      if (
-        current.error ||
-        !current.data ||
-        current.data.generation !== job.generation ||
-        current.data.sent_at ||
-        (current.data.appointments as unknown as { status: string }).status !==
-          "confirmed"
-      )
-        continue;
-      await db
-        .from("notification_events")
-        .insert({ job_id: job.id, event_type: "attempted" });
-      await new WebhookAdapter().send({
-        ...job,
-        id: `${job.id}:${job.generation}`,
-      });
-      const { error } = await db
-        .from("notification_jobs")
-        .update({ sent_at: new Date().toISOString(), locked_until: null })
-        .eq("id", job.id)
-        .eq("generation", job.generation);
-      if (error) throw error;
-      await db
-        .from("notification_events")
-        .insert({ job_id: job.id, event_type: "delivered" });
-      sent++;
-    } catch {
-      await db
-        .from("notification_events")
-        .insert({ job_id: job.id, event_type: "failed" });
-      await db
-        .from("notification_jobs")
-        .update({ locked_until: new Date(Date.now() + 300000).toISOString() })
-        .eq("id", job.id)
-        .eq("generation", job.generation);
-    }
   }
-  return Response.json({ sent });
 }

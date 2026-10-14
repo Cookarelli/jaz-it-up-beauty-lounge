@@ -57,9 +57,8 @@ reset role;
 do $$ declare service uuid=current_setting('test.service')::uuid;stylist uuid=current_setting('test.stylist')::uuid;start_at timestamptz=current_setting('test.start')::timestamptz;begin
  if not exists(select 1 from public.available_slots(service,(start_at at time zone 'America/Chicago')::date) where starts_at=start_at+interval '2 hours') then raise exception 'TEST recurring hours absent from online slots';end if;
  if exists(select 1 from public.available_slots(service,(start_at at time zone 'America/Chicago')::date) where starts_at=start_at) then raise exception 'TEST online slots ignored time off';end if;
- if not exists(select 1 from public.notification_jobs where appointment_id=current_setting('test.appointment')::uuid and generation=3 and sent_at is not null and payload->>'starts_at'=(start_at+interval '1 hour')::text) then
- -- JSON timestamps use ISO formatting; verify using timestamp cast instead.
- if not exists(select 1 from public.notification_jobs where appointment_id=current_setting('test.appointment')::uuid and generation=3 and sent_at is not null and (payload->>'starts_at')::timestamptz=start_at+interval '1 hour') then raise exception 'TEST reminders not revised/cancelled';end if;end if;
+ if not exists(select 1 from public.notification_jobs where appointment_id=current_setting('test.appointment')::uuid and kind='cancellation' and state='pending' and (payload->>'starts_at')::timestamptz=start_at+interval '1 hour') then raise exception 'TEST cancellation message missing';end if;
+ if exists(select 1 from public.notification_jobs where appointment_id=current_setting('test.appointment')::uuid and kind<>'cancellation' and state='pending') then raise exception 'TEST outdated reminders survived cancellation';end if;
 end $$;
 -- Authenticated outsiders and ordinary stylists must never read customer records.
 select set_config('request.jwt.claim.sub',current_setting('test.outsider'),true);
