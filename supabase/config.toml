@@ -34,5 +34,7 @@ enable_anonymous_sign_ins = false
 minimum_password_length = 20
 password_requirements = "lower_upper_letters_digits_symbols"
 [auth.email]
-enable_signup = false
+# Keep the email/password provider available; auth.enable_signup=false above
+# blocks public registration independently.
+enable_signup = true
 enable_confirmations = true

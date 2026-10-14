@@ -130,7 +130,9 @@ export default async function Hours() {
                   {day} ·{" "}
                   {h
                     ? `${h.opens_at.slice(0, 5)}–${h.closes_at.slice(0, 5)}`
-                    : "Closed"}
+                    : business.data!.length
+                      ? "Closed"
+                      : "Not set — stylist hours apply"}
                 </p>
                 {h && remove("business_hours", h.id)}
               </div>

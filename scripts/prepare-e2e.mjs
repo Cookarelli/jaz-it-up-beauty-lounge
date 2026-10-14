@@ -9,6 +9,16 @@ if (url.origin !== "http://127.0.0.1:54321")
 const publicKey = status.PUBLISHABLE_KEY || status.ANON_KEY;
 const secret = status.SECRET_KEY || status.SERVICE_ROLE_KEY;
 if (!publicKey || !secret) throw Error("Local Supabase credentials missing");
+const anon = createClient(url.origin, publicKey, {
+  auth: { persistSession: false },
+});
+const menu = await anon
+  .from("services")
+  .select("id,name,price_approved,duration_approved")
+  .eq("name", "Eyebrow")
+  .single();
+if (menu.error || !menu.data?.price_approved || !menu.data?.duration_approved)
+  throw Error("Local approved public catalog is unavailable");
 const password = randomBytes(32).toString("base64url") + "aA1!";
 const db = createClient(url.origin, secret, {
   auth: { persistSession: false },
@@ -37,13 +47,11 @@ for (const [email, owner] of [
   });
   if (result.error) throw Error("Synthetic Auth provisioning failed");
   if (owner) {
-    const role = await db
-      .from("staff_roles")
-      .insert({
-        salon_id: salon.id,
-        user_id: result.data.user.id,
-        role: "owner",
-      });
+    const role = await db.from("staff_roles").insert({
+      salon_id: salon.id,
+      user_id: result.data.user.id,
+      role: "owner",
+    });
     if (role.error) throw Error("Synthetic owner role could not be created");
   }
 }

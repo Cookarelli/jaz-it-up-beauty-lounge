@@ -6,6 +6,12 @@ if (
   config.NEXT_PUBLIC_SITE_URL !== "http://127.0.0.1:3100"
 )
   throw Error("Refusing non-local E2E server");
+if (
+  config.PUBLIC_BOOKING_ENABLED !== "true" ||
+  !config.BOOKING_RATE_LIMIT_SECRET ||
+  !config.SUPABASE_SECRET_KEY
+)
+  throw Error("Incomplete local booking configuration");
 const env = { ...process.env, ...config, NEXT_TELEMETRY_DISABLED: "1" };
 function run(args) {
   return new Promise((resolve, reject) => {

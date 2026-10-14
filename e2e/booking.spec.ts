@@ -27,6 +27,19 @@ async function fits(page: Page) {
     ),
   ).toBe(true);
 }
+test.afterEach(async ({ page }, info) => {
+  if (info.status !== info.expectedStatus) {
+    // Visible synthetic-only content, never input values, tokens or browser storage.
+    console.log(
+      "Synthetic failure page:",
+      page.url(),
+      await page
+        .locator("main")
+        .innerText()
+        .catch(() => "page unavailable"),
+    );
+  }
+});
 test.beforeEach(async () => {
   // Each test uses the real shared limiter. Clear only this disposable runner's prior counters.
   const result = await db.from("api_rate_limits").delete().neq("scope", "");
@@ -40,8 +53,11 @@ test("guest booking → saved receipt → owner reschedule/cancel; retries and c
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   await fits(page);
   await page.goto("/book");
+  await expect(
+    page.getByRole("heading", { name: "1. Choose your visit" }),
+  ).toBeVisible();
   await page
-    .getByLabel("Service", { exact: true })
+    .getByRole("combobox", { name: /^Service/ })
     .selectOption({ label: "Eyebrow · $10.00" });
   await expect(page.getByLabel("Selected service")).toContainText("15 minutes");
   await expect(page.getByRole("checkbox")).toHaveCount(0);
@@ -51,7 +67,7 @@ test("guest booking → saved receipt → owner reschedule/cancel; retries and c
     "Choose an available time.",
   );
   await page
-    .getByLabel("Time (Central Time)", { exact: true })
+    .getByRole("combobox", { name: /^Time \(Central Time\)/ })
     .selectOption("0");
   await page.getByLabel("Your name").fill("Synthetic Guest");
   await page
@@ -139,7 +155,9 @@ test("guest booking → saved receipt → owner reschedule/cancel; retries and c
       localToISO(`${day}T12:30`, "America/Chicago").replace(".000Z", "+00:00"),
     );
   await page.reload();
-  await page.getByLabel("Status", { exact: true }).selectOption("cancelled");
+  await page
+    .getByRole("combobox", { name: /^Status/ })
+    .selectOption("cancelled");
   await page.getByRole("button", { name: "Save changes", exact: true }).click();
   await expect
     .poll(
@@ -200,6 +218,14 @@ test("private pages deny guests and ordinary authenticated users", async ({
       })
     ).error,
   ).toBeNull();
+  expect(
+    (
+      await outsider.auth.signUp({
+        email: `forbidden-${randomUUID()}@example.invalid`,
+        password: config.E2E_PASSWORD,
+      })
+    ).error,
+  ).not.toBeNull();
   const read = await outsider.from("customers").select("id");
   expect(read.data || []).toHaveLength(0);
   const write = await outsider
@@ -224,21 +250,19 @@ test("owner calendar and hours forms work; manual time off removes slots", async
     page.getByText("Salon hours: 9:00 AM–3:00 PM", { exact: true }),
   ).toHaveCount(1);
   await fits(page);
-  await page.getByLabel("View", { exact: true }).selectOption("month");
+  await page.getByRole("combobox", { name: /^View/ }).selectOption("month");
   await page.getByRole("button", { name: "View calendar" }).click();
   await expect(
     page.getByRole("list", { name: "month calendar" }),
   ).toBeVisible();
   await fits(page);
   await page.goto("/admin/availability");
-  const business = page
-    .getByRole("article")
-    .filter({
-      has: page.getByRole("heading", {
-        name: "Public business hours",
-        exact: true,
-      }),
-    });
+  const business = page.getByRole("article").filter({
+    has: page.getByRole("heading", {
+      name: "Public business hours",
+      exact: true,
+    }),
+  });
   await expect(business.getByLabel("Opens", { exact: true })).toHaveValue(
     "09:00",
   );
@@ -278,11 +302,9 @@ test("owner calendar and hours forms work; manual time off removes slots", async
         ).data?.closes_at,
     )
     .toBe("15:00:00");
-  const block = page
-    .getByRole("article")
-    .filter({
-      has: page.getByRole("heading", { name: "Block time off", exact: true }),
-    });
+  const block = page.getByRole("article").filter({
+    has: page.getByRole("heading", { name: "Block time off", exact: true }),
+  });
   await block.getByLabel("From", { exact: true }).fill(`${day}T10:00`);
   await block.getByLabel("Until", { exact: true }).fill(`${day}T11:00`);
   await block.getByLabel("Reason (private)").fill("Synthetic test time off");
@@ -307,14 +329,114 @@ test("owner calendar and hours forms work; manual time off removes slots", async
         Date.parse(s.starts_at) < start + 3600000,
     ),
   ).toBe(false);
-  const exception = page
-    .getByRole("article")
-    .filter({
-      has: page.getByText("Synthetic test time off", { exact: true }),
-    });
+  const exception = page.getByRole("article").filter({
+    has: page.getByText("Synthetic test time off", { exact: true }),
+  });
   await exception.getByRole("button", { name: "Remove", exact: true }).click();
   await expect(
     page.getByText("No upcoming time off or closures."),
   ).toBeVisible();
   await fits(page);
+});
+
+test("a slow response for a closed date cannot replace newly selected availability", async ({
+  page,
+}) => {
+  const closedDay = shiftDay(day, -2); // Sunday, real database returns no slots.
+  let release!: () => void;
+  let ready!: () => void;
+  let finished!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const started = new Promise<void>((resolve) => {
+    ready = resolve;
+  });
+  const complete = new Promise<void>((resolve) => {
+    finished = resolve;
+  });
+  await page.route(
+    `**/api/availability?**date=${closedDay}**`,
+    async (route) => {
+      const response = await route.fetch();
+      ready();
+      await gate;
+      await route.fulfill({ response });
+      finished();
+    },
+  );
+  await page.goto("/book");
+  await page
+    .getByRole("combobox", { name: /^Service/ })
+    .selectOption({ label: "Eyebrow · $10.00" });
+  await page.getByLabel("Preferred date").fill(closedDay);
+  await page.getByRole("button", { name: "Find available times" }).click();
+  await started;
+  await page.getByLabel("Preferred date").fill(day);
+  await page.getByRole("button", { name: "Find available times" }).click();
+  await expect(page.getByRole("status")).toHaveText(
+    "Choose an available time.",
+  );
+  release();
+  await complete;
+  await expect(page.getByRole("status")).toHaveText(
+    "Choose an available time.",
+  );
+  await expect(page.getByRole("combobox", { name: /^Time/ })).toBeEnabled();
+});
+
+test("owner adds a phone booking with agreed duration and estimate", async ({
+  page,
+}) => {
+  const salon = await db.from("salons").select("id").single();
+  const customer = await db
+    .from("customers")
+    .insert({
+      salon_id: salon.data!.id,
+      name: "Synthetic Phone Guest",
+      phone: "+15555550102",
+      email: `phone-${randomUUID()}@example.invalid`,
+    })
+    .select("id")
+    .single();
+  expect(customer.error).toBeNull();
+  await login(page);
+  await expect(page).toHaveURL(/\/admin$/);
+  await page.goto(`/admin/appointments/new?customer=${customer.data!.id}`);
+  await page
+    .getByRole("combobox", { name: /^Service/ })
+    .selectOption({ label: "Eyebrow" });
+  await page
+    .getByLabel("Start (America/Chicago)")
+    .fill(`${shiftDay(day, 1)}T13:00`);
+  await expect(page.getByLabel("Confirmed duration in minutes")).toHaveValue(
+    "15",
+  );
+  await expect(page.getByLabel("Confirmed estimate in cents")).toHaveValue(
+    "1000",
+  );
+  page.on("dialog", (dialog) => dialog.accept());
+  await page.getByRole("button", { name: "Confirm manual booking" }).click();
+  await page.getByRole("link", { name: "Open saved record" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Synthetic Phone Guest", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("Source: phone", { exact: false })).toBeVisible();
+  await fits(page);
+  await page
+    .getByRole("combobox", { name: /^Status/ })
+    .selectOption("cancelled");
+  await page.getByRole("button", { name: "Save changes", exact: true }).click();
+  await expect
+    .poll(
+      async () =>
+        (
+          await db
+            .from("appointments")
+            .select("status")
+            .eq("customer_id", customer.data!.id)
+            .single()
+        ).data?.status,
+    )
+    .toBe("cancelled");
 });
