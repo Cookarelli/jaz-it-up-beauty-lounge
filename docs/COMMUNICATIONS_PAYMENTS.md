@@ -47,7 +47,7 @@ Twilio message creation has no assumed idempotent POST guarantee. A timeout, amb
 
 Run `GET /api/cron/notifications` every five minutes with `Authorization: Bearer <CRON_SECRET>`; use a random secret of at least 32 characters. The worker expires abandoned checkout records and processes at most 10 jobs per channel per call. Database holds become unavailable/available based on their expiration timestamps even if cron is down. Reminder jobs more than 30 minutes overdue are suppressed. Alert on worker non-2xx responses, unknown/failed jobs and backlog; no uptime guarantee is provided by the app itself.
 
-For an approved **Vercel Pro** deployment, merge `deployment/vercel.pro.example.json` into root `vercel.json` and redeploy. Vercel supplies the bearer header from `CRON_SECRET`. There is intentionally no active root cron schedule (`vercel.json` only disables main-branch auto-deployment): the hosting plan is not yet verified and nothing paid is provisioned. Another trusted HTTPS scheduler can call the same endpoint, with its own availability/costs. A sleeping Mac Mini is unsuitable for reliable production reminders.
+For an approved **Vercel Pro** deployment, merge `deployment/vercel.pro.example.json` into root `vercel.json` and redeploy. Vercel supplies the bearer header from `CRON_SECRET`. There is intentionally no active root cron schedule (`vercel.json` only disables automatic Git deployment and pins npm ci): the hosting plan is not yet verified and nothing paid is provisioned. Another trusted HTTPS scheduler can call the same endpoint, with its own availability/costs. A sleeping Mac Mini is unsuitable for reliable production reminders.
 
 Pricing checked October 14, 2026; verify the linked provider pages before buying:
 
