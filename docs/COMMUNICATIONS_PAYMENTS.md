@@ -1,5 +1,7 @@
 # Communications and optional deposits
 
+**Current phase:** Optional costs stay $0 until the client pays. Messaging, reminders and payments remain disabled. Provider/scheduler activation below is deferred and requires separate owner/budget approval; it is not required to continue development. Use local synthetic tests, not paid cloud resources.
+
 This release adds provider adapters and a guarded payment flow. **All external delivery and payments default off.** No provider account, paid resource, real message or real charge is created by installation, migrations, tests or builds. Existing appointments and the confirmed Chicago schedule are preserved.
 
 ## Apply and deploy

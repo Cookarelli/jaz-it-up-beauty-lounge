@@ -1,5 +1,28 @@
 # Final audit evidence — October 14, 2026
 
+## Current $0 development pass — October 14, 2026
+
+Release state remains **development only; not launched**. No subscription, paid resource, domain, live message, charge or production deployment was created. Public booking, messaging, reminders, indexing and payments remain disabled outside the disposable loopback tests. Automatic Vercel Git deployments remain disabled.
+
+Current code/test revision: `ac438e729c16d06f8bedeb853a8e090be1e90982`. The final documentation commit records this evidence without changing the tested application.
+
+- Fresh `npm ci`, lint, TypeScript, **44 unit tests** and production build pass locally. Production dependency audit reports zero vulnerabilities. Existing upstream ESLint peer warnings and development-only braces advisories remain documented.
+- The five unchanged PostgreSQL test suites and seven concurrency scenarios pass on the existing standard GitHub Actions runner. Database and browser fixtures are synthetic and disposable, not salon records.
+- Browser acceptance: **PASS: 10/10 tests** in [Quality run 38637256485](https://github.com/Cookarelli/jaz-it-up-beauty-lounge/actions/runs/38637256485), with all three jobs successful, including fresh install/lint/typecheck/44 unit tests/build, five SQL suites and seven concurrent scenarios. The local Supabase stack was disposed successfully afterward. The suite uses real local Supabase Auth, PostgREST, RLS and PostgreSQL with a production Next.js server. It tests phone and tablet layouts, guest reservation and receipt, idempotent retry, slot conflict, forged origin rejection, protected booking status, owner reschedule/cancel, private-page authorization, blocked public Auth signup, calendar views, recurring-hours edits, manual time off, stale availability responses and phone bookings.
+- The browser checks uncovered and drove fixes for an internal-host origin mismatch and native form reset changing the selected weekday after a save. The guest receipt uses saved appointment data and omits private notes/customer contact fields. Old availability responses cannot replace a newly chosen date/service.
+- Live Supabase was queried **read-only**: 11 migrations; zero customers/appointments; America/Chicago; both business/stylist weeks Tue–Fri 09:00–19:00 and Sat 09:00–15:00; Sun/Mon omitted (closed). All public tables retain RLS. Email, SMS, reminders and payments remain false; deposit policy is `none`. No live migration, seed, table mutation or policy change was performed in this pass.
+- The 11 applied migration files are byte-for-byte unchanged from the prior `cf47a0f` commit. Clean histories are replayed only inside fresh disposable CI containers.
+- Local browser review at 390px confirmed the current cream/teal layout fits. The public booking gate shows coming soon, with no reservation form. No photographs or logo files were available in `public/images`; placeholders remain identified as placeholders.
+- The existing [Vercel visual preview](https://jaz-it-up-beauty-lounge-dodschf0i-steves-projects-e37a4ef4.vercel.app) was reopened successfully. It remains the **older `206251c` build**, not this change set. No updated Vercel deployment is claimed. It has no preview database and cannot demonstrate a real hosted reservation.
+
+Supabase leaked-password protection is a **known, accepted temporary limitation of Free**, still disabled and unresolved. Existing password strength, restricted authentication and RLS measures are retained. No upgrade is required or authorized for current development; informational RLS notices were not silenced by opening data access.
+
+Remaining acceptance: Delia’s personal Auth account and recovery/handoff; real contact/address and authorized media; unresolved service prices/durations; cancellation/privacy/retention approval; off-machine encrypted backup and isolated restore drill; final hosted-origin/abuse checks; owner walkthrough and explicit launch approval. Future messaging/payment activation has its own provider acceptance and budget decisions; neither is part of this $0 development phase.
+
+See [Delia’s walkthrough](docs/DELIA_WALKTHROUGH.md) and [the isolated test instructions](docs/ISOLATED_TESTING.md).
+
+## Earlier audit and deployment record
+
 **Release decision: preview only.** See [LAUNCH_CHECKLIST.md](LAUNCH_CHECKLIST.md) and [OPERATIONS.md](OPERATIONS.md). No live customer messages, live charges or public booking activation occurred. An automatic deployment unexpectedly targeted Production; it reached READY before cancellation and production serving was then paused in Vercel. With explicit user approval, that deployment was deleted and the project resumed with no production deployment. This is an incident record, not an approved release.
 
 ## Source and reproducibility

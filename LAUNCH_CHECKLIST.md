@@ -35,15 +35,15 @@ Audit date: October 14, 2026. **Release decision: preview only; public booking i
 | --- | --- | --- |
 | Fresh install / lockfile | PASS | `npm ci`; pinned lockfile; Node 24 in CI. Upstream ESLint peer-range warnings remain. |
 | Types / lint / production build | PASS | Local production build and GitHub Quality checks. |
-| Unit / integration | PASS | 42 TypeScript tests; five PostgreSQL assertion suites replay all migrations in disposable PostgreSQL 17. |
+| Unit / integration | PASS | 44 TypeScript tests, five PostgreSQL assertion suites, seven concurrency scenarios and ten browser tests pass in [Quality run 38637256485](https://github.com/Cookarelli/jaz-it-up-beauty-lounge/actions/runs/38637256485). Replays occur only in disposable local databases. |
 | Migrations / RLS | PASS | Clean replay passed in PostgreSQL 17 CI. All 11 migrations now applied live; all 27 public tables have RLS. Zero anonymous writable tables or client-executable sensitive RPCs. |
 | Customer privacy / guest API | PASS in tests | Tenant RLS, no anonymous table writes, current role authorization, capability checks, origin checks, bounded JSON, no-store API responses. Hosted acceptance pending. |
 | Concurrent booking | PASS | Seven parallel-connection scenarios: slot collision, duplicate retry, buffers, holds, blocks, queue claims and rate limiting. |
 | Chicago time / DST | PASS | Both transitions, invalid/repeated local times, closing buffers and continuous lunch covered. |
-| Admin login / permissions | PARTIAL | Owner/manager versus outsider/stylist SQL checks pass; unsigned browser access redirects. Real signed-in owner acceptance pending. |
+| Admin login / permissions | PARTIAL | SQL authorization checks and synthetic owner/outsider browser checks pass. Delia’s personal account and hosted acceptance remain pending. |
 | Approved menu | PASS | Live 23 services + 15 variants compared with owner snapshot: zero pricing/timing/approval differences. Unclear values remain unapproved. |
-| Manual booking / changes | PASS in SQL | Phone/walk-in, idempotency, rescheduling, stale revisions, cancellation, completion and no-show covered. Owner browser acceptance pending. |
-| Mobile journey | PARTIAL | Hosted preview menu and closed-booking flow inspected at 390px; navigation closure and Escape focus fixed. Local tablet login fits at 820px. A hosted reservation has not been completed. |
+| Manual booking / changes | PASS in SQL | SQL covers phone/walk-in, idempotency, stale revisions, cancellation, completion and no-show. Synthetic phone-booking, reschedule and cancellation browser checks pass; Delia’s walkthrough remains pending. |
+| Mobile journey | PASS isolated; hosted pending | Ten phone/tablet browser tests pass against real local Supabase Auth/API/database, including full reservation and admin workflows. Existing hosted preview still keeps booking closed; hosted acceptance is pending. |
 | Notifications | PASS in tests | Retry/lease, consent, generation, provider idempotency and event deduplication tested. Real delivery/scheduler acceptance pending. |
 | Payments off | PASS in tests | Default-off flags, missing-credential failures, signed-event finalization, holds, failed/late payments and refunds covered. No charge made. |
 | Accessibility / SEO | PARTIAL | Labels, skip link, focus, reduced motion, canonicals, noindex-by-default and security headers inspected. Screen-reader and authenticated tablet acceptance pending. |
@@ -53,6 +53,8 @@ Audit date: October 14, 2026. **Release decision: preview only; public booking i
 | Backup / recovery | PARTIAL | Encrypted export created; 57 table counts, decryption and file hashes verified. Off-machine copy, full isolated restore drill and owner retention decisions remain required. |
 
 ## Deferred risks — P1
+
+- Supabase Free leaked-password protection remains disabled. The project owner accepts this temporary limitation. It is not fixed and does not authorize a paid upgrade; retain the existing password, Auth and RLS protections.
 
 - Review the [braces advisory](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm) and update when a patched compatible release exists. It affects development lint tooling, not the production dependency tree. Do not run `npm audit fix --force` to downgrade the framework. Build only trusted code/configuration with secrets scoped to trusted releases.
 - IP rate limits reduce abuse but do not stop a distributed attacker or IPv6 address rotation. Configure hosting firewall/bot rules and watch 429/5xx rates. Fixed windows can permit a burst across a bucket boundary.
