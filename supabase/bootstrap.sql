@@ -1,5 +1,7 @@
 -- Run once in a new Supabase project's SQL editor. No client records are seeded.
-create extension if not exists btree_gist;
+create schema if not exists extensions;
+create extension if not exists btree_gist with schema extensions;
+set search_path = public, extensions;
 create table public.locations(id uuid primary key default gen_random_uuid(),name text not null,timezone text not null default 'America/Chicago');
 create table public.stylists(id uuid primary key default gen_random_uuid(),location_id uuid not null references public.locations,name text not null,active boolean not null default true);
 create table public.salon_admins(user_id uuid primary key references auth.users on delete cascade);

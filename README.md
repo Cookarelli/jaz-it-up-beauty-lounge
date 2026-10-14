@@ -61,3 +61,7 @@ Booking includes same-origin checks, request validation, a honeypot and a databa
 ## Dependency audit
 
 Production dependency audit: zero known vulnerabilities at verification time. Full audit reports five high-severity entries in the development-only `eslint-config-next → fast-glob → micromatch → braces` chain (GHSA-vfj7-8cjw-p6xm). The registry offers no patched stable braces release at verification time; npm suggests an inappropriate Next lint-config downgrade. Do not feed untrusted glob patterns to lint tooling. Recheck upstream before release.
+
+## Connected salon project
+
+The initial schema is now installed in project `fwxothhjxtvuupyeqsri` (Jaz It Up, OptAImal LLC). Do not rerun the bootstrap against this project. It contains one salon location and Delia’s stylist record, but no client appointments or published services. The local ignored `.env.local` contains the project URL and publishable key; runtime booking still requires SUPABASE_SECRET_KEY. Create Delia’s Auth user and add her UUID to salon_admins before using management. Live SQL checks passed for reservation, notification enqueueing, duplicate-slot rejection and cancellation; all synthetic records were rolled back. The notification queue intentionally has no client RLS policies and is accessed only by server credentials.
