@@ -1,10 +1,12 @@
-# Verification
+# Dashboard verification
 
-- Latest main inspected before changes; existing schema/IDs preserved.
-- npm ci, lint, TypeScript, 13 validation/unit tests, production build passed.
-- Live SQL assertion suite passed after migrations, with all synthetic records rolled back.
-- Database tests cover approval gates, variants, holds, buffered conflicts, cancellation, hours, exceptions, customer snapshots, two queued notifications, owner edits, stale revisions, audit logs, public-read/private-note rules, unauthenticated writes and disabled payments.
-- Security advisor: no warnings/errors; three informational entries for deliberately server-only holds/notification tables without client policies.
-- Owner board: 23 services and 15 variants. Unclear prices/times remain unapproved and visible; chemical haircut/style bundles are included once.
-- No secrets or client data are tracked. No deployment success is claimed.
-- Runtime secret key, Delia’s Auth membership, actual business hours, remaining owner approvals and notification provider/scheduler still require setup. Signed-in browser management and simultaneous-request load testing remain outstanding.
+Story: an authorized salon owner signs in, manages appointments/customers/hours/services/content through server actions, and receives validated, tenant-scoped Postgres changes with audit history.
+
+- Base main: `5818f8e4fcc80f2597ffe4f65f6635767bbc4069`; existing IDs/history preserved.
+- New protected routes: Today, calendar, bookings/details/new, customers/details/new, hours/time off, settings/policies, reports and audit history.
+- Every private page and action verifies Supabase Auth and current staff membership. RLS independently scopes table operations to the salon. No service key enters a client component.
+- TypeScript, lint, 23 unit/validation tests and optimized Next.js build pass.
+- Database suites replay all migrations on disposable PostgreSQL 17 in GitHub CI. Local PostgreSQL startup is blocked by sandbox shared-memory permissions. Long live test transactions were rejected by the connector with `Invalid or expired requestState`; no live test success is claimed for this release.
+- Migrations are applied to the existing salon Supabase project; no new cloud resources or payment integrations were created.
+- UI uses associated labels, keyboard-accessible controls, live error/status messages, native confirmation dialogs, responsive columns and tablet/mobile calendar layouts.
+- Remaining acceptance: sign in with Delia’s provisioned account and verify owner screens against real salon configuration, configure provider email delivery, and exercise simultaneous reservations under load. No real customer data or test passwords are tracked.

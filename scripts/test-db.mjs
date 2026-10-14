@@ -21,10 +21,14 @@ try {
       .sort())
       await db.query(await readFile(`supabase/migrations/${file}`, "utf8"));
   }
-  const result = await db.query(
-    await readFile("supabase/tests/catalog.sql", "utf8"),
-  );
-  console.log(result.at(-1)?.rows || "Database tests passed.");
+  for (const file of (await readdir("supabase/tests"))
+    .filter((x) => x.endsWith(".sql"))
+    .sort()) {
+    const result = await db.query(
+      await readFile(`supabase/tests/${file}`, "utf8"),
+    );
+    console.log(file, result.at(-1)?.rows || "Database tests passed.");
+  }
 } finally {
   await db.query("rollback").catch(() => {});
   await db.end();

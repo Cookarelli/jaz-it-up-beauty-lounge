@@ -19,14 +19,32 @@ export async function GET(req: Request) {
   let sent = 0;
   for (const job of data || []) {
     try {
+      const current = await db
+        .from("notification_jobs")
+        .select("generation,sent_at,appointments!inner(status)")
+        .eq("id", job.id)
+        .single();
+      if (
+        current.error ||
+        !current.data ||
+        current.data.generation !== job.generation ||
+        current.data.sent_at ||
+        (current.data.appointments as unknown as { status: string }).status !==
+          "confirmed"
+      )
+        continue;
       await db
         .from("notification_events")
         .insert({ job_id: job.id, event_type: "attempted" });
-      await new WebhookAdapter().send(job);
+      await new WebhookAdapter().send({
+        ...job,
+        id: `${job.id}:${job.generation}`,
+      });
       const { error } = await db
         .from("notification_jobs")
         .update({ sent_at: new Date().toISOString(), locked_until: null })
-        .eq("id", job.id);
+        .eq("id", job.id)
+        .eq("generation", job.generation);
       if (error) throw error;
       await db
         .from("notification_events")
@@ -39,7 +57,8 @@ export async function GET(req: Request) {
       await db
         .from("notification_jobs")
         .update({ locked_until: new Date(Date.now() + 300000).toISOString() })
-        .eq("id", job.id);
+        .eq("id", job.id)
+        .eq("generation", job.generation);
     }
   }
   return Response.json({ sent });

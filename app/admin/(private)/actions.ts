@@ -13,7 +13,7 @@ export async function saveService(
   form: FormData,
 ): Promise<import("@/lib/validation").ServiceFormState> {
   const db = await requireAdmin();
-  const parsed = serviceSchema.safeParse(Object.fromEntries(form));
+  const parsed = serviceSchema.safeParse({ ...Object.fromEntries(form), active: form.has("active") });
   if (!parsed.success)
     return {
       message: "Check the highlighted fields.",
@@ -43,38 +43,4 @@ export async function saveService(
   revalidatePath("/services");
   revalidatePath("/book");
   return { message: "Saved successfully.", saved: true };
-}
-export async function updateAppointment(form: FormData) {
-  const db = await requireAdmin();
-  const id = z.uuid().parse(form.get("id"));
-  const status = z
-    .enum(["confirmed", "cancelled", "completed"])
-    .parse(form.get("status"));
-  const { error } = await db
-    .from("appointments")
-    .update({ status })
-    .eq("id", id);
-  if (error) throw Error("Could not update appointment");
-  revalidatePath("/admin");
-}
-export async function addAvailability(form: FormData) {
-  const db = await requireAdmin();
-  const stylist = z.uuid().parse(form.get("stylist_id"));
-  const start = z.iso.datetime({ offset: true }).parse(form.get("starts_at"));
-  const end = z.iso.datetime({ offset: true }).parse(form.get("ends_at"));
-  if (new Date(end) <= new Date(start)) throw Error("End must follow start");
-  const { error } = await db
-    .from("availability")
-    .insert({ stylist_id: stylist, starts_at: start, ends_at: end });
-  if (error) throw Error("Could not publish availability");
-  revalidatePath("/admin/availability");
-}
-export async function removeAvailability(form: FormData) {
-  const db = await requireAdmin();
-  const { error } = await db
-    .from("availability")
-    .delete()
-    .eq("id", z.uuid().parse(form.get("id")));
-  if (error) throw Error("Could not remove availability");
-  revalidatePath("/admin/availability");
 }

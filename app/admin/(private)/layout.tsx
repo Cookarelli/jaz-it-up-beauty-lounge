@@ -1,7 +1,5 @@
 export const dynamic = "force-dynamic";
-import { adminClient } from "@/lib/supabase";
-import { configured } from "@/lib/env";
-import { redirect } from "next/navigation";
+import { adminContext } from "@/lib/admin";
 import Link from "next/link";
 import { logout } from "../login/actions";
 export const metadata = {
@@ -13,22 +11,37 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  if (!configured) redirect("/admin/login");
-  const db = await adminClient();
-  if (!db) redirect("/admin/login?error=1");
+  const { salon } = await adminContext();
   return (
-    <section>
-      <span className="eyebrow">JAZ IT UP · SALON MANAGEMENT</span>
-      <h1>Your lounge, at a glance.</h1>
-      <nav className="admin-nav" aria-label="Salon management">
-        <Link href="/admin">Appointments</Link>
-        <Link href="/admin/services">Service catalog</Link>
-        <Link href="/admin/availability">Availability</Link>
+    <section className="admin-shell">
+      <div className="admin-brand">
+        <div>
+          <span className="eyebrow">PRIVATE SALON MANAGEMENT</span>
+          <h1>{salon.name}</h1>
+          <p>All times in {salon.timezone}.</p>
+        </div>
         <form action={logout}>
-          <button>Sign out</button>
+          <button className="secondary">Sign out</button>
         </form>
+      </div>
+      <nav className="admin-nav" aria-label="Salon management">
+        {[
+          ["Today", "/admin"],
+          ["Calendar", "/admin/calendar"],
+          ["Bookings", "/admin/appointments"],
+          ["Customers", "/admin/customers"],
+          ["Hours & time off", "/admin/availability"],
+          ["Services", "/admin/services"],
+          ["Salon & policies", "/admin/settings"],
+          ["Reports", "/admin/reports"],
+          ["Change history", "/admin/history"],
+        ].map(([label, url]) => (
+          <Link key={url} href={url}>
+            {label}
+          </Link>
+        ))}
       </nav>
-      {children}
+      <div className="admin-content">{children}</div>
     </section>
   );
 }

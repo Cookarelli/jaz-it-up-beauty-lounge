@@ -43,7 +43,19 @@ export function ServiceFields({
     </label>
   );
   return (
-    <form action={action}>
+    <form
+      action={action}
+      onSubmit={(e) => {
+        const data = new FormData(e.currentTarget);
+        if (
+          (data.get("status") === "archived" || !data.get("active")) &&
+          !window.confirm(
+            "Hide this service from booking? Existing appointments will remain.",
+          )
+        )
+          e.preventDefault();
+      }}
+    >
       <input type="hidden" name="id" value={service.id} />
       <input type="hidden" name="kind" value={kind} />
       <input type="hidden" name="revision" value={service.revision} />
@@ -60,6 +72,17 @@ export function ServiceFields({
         </p>
       )}
       {field("name", "Name")}
+      {kind === "service" && field("category", "Category")}
+      <label>
+        <span>
+          <input
+            type="checkbox"
+            name="active"
+            defaultChecked={service.active}
+          />{" "}
+          Available in catalog / booking
+        </span>
+      </label>
       {field("description", "Public description")}
       <label>
         Pricing

@@ -17,6 +17,8 @@ export const bookingSchema = z.object({
 });
 export const serviceSchema = z
   .object({
+    category: z.string().trim().min(2).max(60).optional(),
+    active: checkbox.optional(),
     name: z.string().trim().min(2).max(100),
     description: z.string().trim().max(500),
     pricing_type: z.enum(["exact", "starting", "range", "consultation"]),

@@ -10,6 +10,11 @@ export async function login(form: FormData) {
   const db = await sessionClient();
   const { error } = await db.auth.signInWithPassword(parsed.data);
   if (error) redirect("/admin/login?error=1");
+  const authorization = await db.rpc("is_salon_admin");
+  if (authorization.error || authorization.data !== true) {
+    await db.auth.signOut();
+    redirect("/admin/login?error=1");
+  }
   redirect("/admin");
 }
 export async function logout() {

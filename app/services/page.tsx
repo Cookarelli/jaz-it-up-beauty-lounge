@@ -2,7 +2,6 @@ export const dynamic = "force-dynamic";
 import { Intro, Button } from "@/components/site";
 import { catalog } from "@/lib/catalog";
 import {
-  categories,
   formatPrice,
   formatDuration,
   bookable,
@@ -57,7 +56,7 @@ export default async function Services() {
         Services awaiting price or timing approval remain visible, but cannot be
         booked instantly.
       </p>
-      {categories.map((category) => (
+      {Array.from(new Set(services.map((s) => s.category))).map((category) => (
         <div key={category}>
           <h2>{category}</h2>
           <div className="cards">

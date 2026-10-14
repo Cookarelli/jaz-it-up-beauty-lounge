@@ -1,21 +1,20 @@
 import { Button, Placeholder } from "@/components/site";
 import { ArrowUpRight, Sparkles, Heart, Scissors } from "lucide-react";
-export default function Home() {
+import { publicProfile } from "@/lib/salon-profile";
+export const dynamic = "force-dynamic";
+export default async function Home() {
+  const profile = await publicProfile();
   return (
     <>
       <section className="hero">
         <div className="hero-copy">
           <span className="eyebrow">WELCOME TO YOUR NEXT GOOD HAIR DAY</span>
           <h1>
-            A little refresh.
-            <br />A whole new
-            <br />
-            <em>feeling.</em>
+            {profile?.hero_title || "A little refresh. A whole new feeling."}
           </h1>
-          <p>
-            Beautiful hair. Easy conversation. Time just for you.
-            <br />
-            Make yourself at home at Jaz It Up Beauty Lounge.
+          <p className="preserve-lines">
+            {profile?.hero_text ||
+              "Beautiful hair. Easy conversation. Time just for you. Make yourself at home at Jaz It Up Beauty Lounge."}
           </p>
           <div className="actions">
             <Button href="/book">Find your next appointment</Button>
@@ -83,10 +82,6 @@ export default function Home() {
             );
           })}
         </div>
-        <small className="muted">
-          Service categories are illustrative until Delia publishes the salon
-          menu.
-        </small>
       </section>
       <section className="about">
         <div>
@@ -98,13 +93,9 @@ export default function Home() {
           </h2>
         </div>
         <div>
-          <p>
-            Welcome to Delia’s Jaz It Up Beauty Lounge. A warm space for fresh
-            looks, personal attention, and a well-deserved moment to yourself.
-          </p>
-          <p>
-            Whether you know exactly what you want or need a little inspiration,
-            your visit starts with a conversation.
+          <p className="preserve-lines">
+            {profile?.about_text ||
+              "Welcome to Delia’s Jaz It Up Beauty Lounge. A warm space for fresh looks, personal attention, and a well-deserved moment to yourself."}
           </p>
           <Button secondary href="/book">
             Let’s make time for you
