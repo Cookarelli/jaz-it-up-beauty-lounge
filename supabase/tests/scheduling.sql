@@ -30,7 +30,7 @@ begin
    if slot_count<>0 then raise exception 'TEST: Sunday/Monday must be closed';end if;
   else
    open_at=(d+'09:00'::time) at time zone 'America/Chicago';close_at=(d+case when weekday=6 then '15:00'::time else '19:00'::time end) at time zone 'America/Chicago';
-   if slot_count<>case when weekday=6 then 12 else 20 end or first_slot<>open_at or last_slot<>close_at-interval '30 minutes' then raise exception 'TEST: hours or automatic gap mismatch for %',d;end if;
+   if slot_count<>(case when weekday=6 then 12 else 20 end) or first_slot<>open_at or last_slot<>close_at-interval '30 minutes' then raise exception 'TEST: hours or automatic gap mismatch for %',d;end if;
    if not exists(select 1 from public.available_slots(service,d) where starts_at=(d+'12:00'::time) at time zone 'America/Chicago') or not exists(select 1 from public.available_slots(service,d) where starts_at=(d+'12:30'::time) at time zone 'America/Chicago') then raise exception 'TEST: lunch was blocked';end if;
    if weekday=2 then tuesday=d;end if;if weekday=6 then saturday=d;end if;
   end if;
@@ -42,7 +42,7 @@ begin
   autumn=make_date(y,11,1)+(7-extract(dow from make_date(y,11,1))::integer)%7;
   for d in select v.day from (values(spring-1),(spring+2),(autumn-1),(autumn+2)) v(day) where v.day>current_date and v.day<current_date+365 loop
    select min(starts_at),count(*) into first_slot,slot_count from public.available_slots(service,d);
-   if first_slot is distinct from ((d+'09:00'::time) at time zone 'America/Chicago') or slot_count<>case when extract(dow from d)=6 then 12 else 20 end then raise exception 'TEST: DST changed local operating hours';end if;
+   if first_slot is distinct from ((d+'09:00'::time) at time zone 'America/Chicago') or slot_count<>(case when extract(dow from d)=6 then 12 else 20 end) then raise exception 'TEST: DST changed local operating hours';end if;
    if d in (spring-1,autumn+2) and (first_slot at time zone 'UTC')::time<>'15:00'::time then raise exception 'TEST: winter opening must be 15:00 UTC';end if;
    if d in (spring+2,autumn-1) and (first_slot at time zone 'UTC')::time<>'14:00'::time then raise exception 'TEST: summer opening must be 14:00 UTC';end if;
   end loop;
