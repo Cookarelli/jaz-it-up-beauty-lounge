@@ -86,7 +86,10 @@ do $$ declare salon uuid;stylist uuid;service uuid;start_at timestamptz;r public
  r=public.begin_booking(gen_random_uuid(),repeat('a',64),b);
  select * into strict j from public.claim_messages('sms');
  update public.notification_jobs set locked_until=now()-interval '1 minute' where public.notification_jobs.id=j.id;
- if exists(select 1 from public.claim_messages('sms')) or (select state from public.notification_jobs where public.notification_jobs.id=j.id)<>'unknown' then raise exception 'TEST: ambiguous SMS was retried';end if;
+ -- Materialize the mutating call before reading state; SQL expressions do not guarantee evaluation order.
+ select count(*) into count_before from public.claim_messages('sms');
+ if count_before<>0 then raise exception 'TEST: ambiguous SMS was claimed again';end if;
+ if (select state from public.notification_jobs where public.notification_jobs.id=j.id)<>'unknown' then raise exception 'TEST: ambiguous SMS not marked unknown';end if;
  update public.notification_jobs set due_at=now()-interval '31 minutes',expires_at=now()-interval '1 minute' where appointment_id=r.appointment_id and kind='reminder';
  perform public.claim_messages('email');
  if exists(select 1 from public.notification_jobs where appointment_id=r.appointment_id and kind='reminder' and state<>'suppressed') then raise exception 'TEST: overdue reminders still eligible';end if;
