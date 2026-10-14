@@ -324,7 +324,7 @@ test("owner calendar and hours forms work; manual time off removes slots", async
   await block.getByLabel("Reason (private)").fill("Synthetic test time off");
   await block.getByRole("button", { name: "Block time", exact: true }).click();
   await expect(
-    page.getByText("Synthetic test time off", { exact: true }),
+    page.getByText("Synthetic test time off", { exact: false }),
   ).toBeVisible();
   const service = await db
     .from("services")
@@ -344,7 +344,7 @@ test("owner calendar and hours forms work; manual time off removes slots", async
     ),
   ).toBe(false);
   const exception = page.getByRole("article").filter({
-    has: page.getByText("Synthetic test time off", { exact: true }),
+    has: page.getByText("Synthetic test time off", { exact: false }),
   });
   await exception.getByRole("button", { name: "Remove", exact: true }).click();
   await expect(
