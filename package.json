@@ -11,7 +11,10 @@
     "test": "tsx --test tests/*.test.ts",
     "test:db": "node scripts/test-db.mjs",
     "test:concurrency": "node scripts/test-concurrency.mjs",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "practice:setup": "node scripts/practice.mjs setup",
+    "practice:start": "node scripts/practice.mjs start",
+    "practice:stop": "node scripts/practice.mjs stop"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.7",

@@ -47,6 +47,7 @@ supabase/.temp/
 
 # Disposable local browser tests: generated keys and synthetic records only.
 .e2e/
+.practice/
 /test-results/
 /playwright-report/
 supabase/.branches/

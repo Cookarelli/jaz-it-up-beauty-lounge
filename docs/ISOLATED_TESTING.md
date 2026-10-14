@@ -6,6 +6,8 @@ The 11 historical migration files are **unchanged**. They are replayed only into
 
 ## Mac Mini / local Docker-compatible runtime
 
+For a persistent manual walkthrough with fictional customers, see [Local practice](LOCAL_PRACTICE.md). The commands below are for disposable automated test runs.
+
 Use an already available free Docker-compatible runtime. Do not purchase a runtime, hosted database or runner. This Codex Mac currently has no Docker daemon; run the workflow in GitHub Actions instead unless a suitable local runtime is available.
 
 From a clean checkout with `npm ci` completed:
