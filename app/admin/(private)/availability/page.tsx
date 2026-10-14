@@ -1,3 +1,4 @@
+import { HoursForm } from "@/components/hours-form";
 import { adminContext } from "@/lib/admin";
 import { weekdays, displayTime, localDate } from "@/lib/admin-time";
 import { AdminForm, Field, Notes, Identity } from "@/components/admin-form";
@@ -65,18 +66,6 @@ export default async function Hours() {
       </select>
     </label>
   );
-  const days = (
-    <label>
-      Day of week
-      <select name="weekday">
-        {weekdays.map((d, i) => (
-          <option key={d} value={i}>
-            {d}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
   const remove = (table: string, id: string) => (
     <AdminForm
       action={removeScheduleEntry}
@@ -105,17 +94,12 @@ export default async function Hours() {
       <div className="admin-columns">
         <article className="card">
           <h3>Recurring stylist hours</h3>
-          <AdminForm
+          <HoursForm
+            kind="working"
+            hours={working.data!}
+            staff={staff.data!}
             action={saveHours}
-            label="Save working day"
-            confirm="Update this recurring working day? Check existing bookings before shortening hours."
-          >
-            <input type="hidden" name="kind" value="working" />
-            {stylistSelect()}
-            {days}
-            <Field name="opens_at" label="Starts" type="time" required />
-            <Field name="closes_at" label="Ends" type="time" required />
-          </AdminForm>
+          />
           <h4>Working week</h4>
           {working.data!.map((h) => (
             <div className="schedule-row" key={h.id}>
@@ -131,26 +115,27 @@ export default async function Hours() {
         </article>
         <article className="card">
           <h3>Public business hours</h3>
-          <AdminForm
+          <HoursForm
+            kind="business"
+            hours={business.data!}
+            staff={staff.data!}
             action={saveHours}
-            label="Save business day"
-            confirm="Update this business day? These hours appear on the website and limit online booking times."
-          >
-            <input type="hidden" name="kind" value="business" />
-            {days}
-            <Field name="opens_at" label="Opens" type="time" required />
-            <Field name="closes_at" label="Closes" type="time" required />
-          </AdminForm>
+          />
           <h4>Published hours</h4>
-          {business.data!.map((h) => (
-            <div className="schedule-row" key={h.id}>
-              <p>
-                {weekdays[h.weekday]} · {h.opens_at.slice(0, 5)}–
-                {h.closes_at.slice(0, 5)}
-              </p>
-              {remove("business_hours", h.id)}
-            </div>
-          ))}
+          {weekdays.map((day, weekday) => {
+            const h = business.data!.find((h) => h.weekday === weekday);
+            return (
+              <div className="schedule-row" key={day}>
+                <p>
+                  {day} ·{" "}
+                  {h
+                    ? `${h.opens_at.slice(0, 5)}–${h.closes_at.slice(0, 5)}`
+                    : "Closed"}
+                </p>
+                {h && remove("business_hours", h.id)}
+              </div>
+            );
+          })}
           <p className="muted">
             With any business days configured, omitted days are closed. If you
             remove all business hours, stylist working hours alone define

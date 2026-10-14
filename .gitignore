@@ -44,3 +44,9 @@ next-env.d.ts
 
 # Supabase CLI local cache
 supabase/.temp/
+
+# Disposable local browser tests: generated keys and synthetic records only.
+.e2e/
+/test-results/
+/playwright-report/
+supabase/.branches/

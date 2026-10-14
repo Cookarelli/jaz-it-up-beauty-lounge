@@ -1,0 +1,38 @@
+# Disposable local development only. Never link this stack to the salon project.
+project_id = "jaz-isolated-e2e"
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 17
+[db.seed]
+enabled = false
+[studio]
+enabled = false
+[realtime]
+enabled = false
+[storage]
+enabled = false
+[analytics]
+enabled = false
+[edge_runtime]
+enabled = false
+[local_smtp]
+enabled = true
+port = 54324
+[auth]
+enabled = true
+site_url = "http://127.0.0.1:3100"
+additional_redirect_urls = []
+enable_signup = false
+enable_anonymous_sign_ins = false
+minimum_password_length = 20
+password_requirements = "lower_upper_letters_digits_symbols"
+[auth.email]
+enable_signup = false
+enable_confirmations = true

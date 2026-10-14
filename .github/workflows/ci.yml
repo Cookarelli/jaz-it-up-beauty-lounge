@@ -47,3 +47,26 @@ jobs:
       - run: npm run test:concurrency
         env:
           TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/salon_test
+
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Ephemeral containers on the existing Actions runner. No cloud keys or paid services.
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Start isolated Supabase (no hosted project)
+        run: |
+          mkdir -p .e2e
+          npx --yes supabase@2.121.0 start > .e2e/start.log 2>&1
+          npx --yes supabase@2.121.0 status -o json > .e2e/status.json
+      - run: node scripts/prepare-e2e.mjs
+      - run: npm run test:e2e
+      - name: Dispose synthetic database
+        if: always()
+        run: npx --yes supabase@2.121.0 stop --no-backup

@@ -2,6 +2,12 @@
 
 Next.js App Router, TypeScript, Tailwind, Supabase Auth/Postgres, and Vercel-ready deployment. Public customers do not need accounts. Public booking, messaging, indexing and optional payments default off. Start with [LAUNCH_CHECKLIST.md](LAUNCH_CHECKLIST.md) and [OPERATIONS.md](OPERATIONS.md) for the current release decision and setup/recovery procedures.
 
+## Current development phase
+
+Optional service spend stays **$0 until Delia pays for the application**. Keep Supabase Free and use Vercel Hobby only for permitted development previews. No paid upgrades/add-ons/domains are authorized. Public booking, messaging and payments remain disabled. The 11 applied salon migrations must not be edited or rerun. Disabled Supabase leaked-password protection is an accepted temporary Free-plan limitation, not fixed; all existing Auth/RLS protections remain.
+
+Use [isolated local/CI browser testing](docs/ISOLATED_TESTING.md), [Delia’s walkthrough](docs/DELIA_WALKTHROUGH.md) and its concrete approval list. No extra hosted environment is needed for these development tests.
+
 ## Local development / Mac Mini
 
 Install Node 24 LTS and Git. On a Mac Mini, install Xcode Command Line Tools (`xcode-select --install`), then Node from nodejs.org or a version manager. From the repository root:
@@ -102,7 +108,7 @@ Delia can edit her schedule and manually block any time in **Admin → Hours & t
 TEST_DATABASE_URL=postgres://postgres:postgres@localhost:5432/salon_test npm run test:db
 ```
 
-Use a disposable database. On an empty PostgreSQL 17 test database, the runner installs a minimal Auth/role compatibility fixture and replays every migration before running assertions. Existing test schemas are tested without replay. GitHub CI includes a PostgreSQL service for a clean replay; no Supabase credentials are needed. The fixture is test-only and must never be installed into a live Supabase project. Validation tests also assert all 23 services, 15 variants, supplied prices, owner-review flags, chemical bundles, labels and daylight-saving behavior. The prior catalog suite passed on the live project. For this dashboard release, the full suites run in the disposable PostgreSQL CI job. Local macOS sandbox shared-memory restrictions prevent starting PostgreSQL here. A real signed-in browser acceptance test still requires Delia’s provisioned account; no test login bypass is included.
+Use a disposable database. On an empty PostgreSQL 17 test database, the runner installs a minimal Auth/role compatibility fixture and replays every migration before running assertions. Existing test schemas are tested without replay. GitHub CI includes a PostgreSQL service for a clean replay; no Supabase credentials are needed. The fixture is test-only and must never be installed into a live Supabase project. Validation tests also assert all 23 services, 15 variants, supplied prices, owner-review flags, chemical bundles, labels and daylight-saving behavior. The prior catalog suite passed on the live project. For this dashboard release, the full suites run in the disposable PostgreSQL CI job. Local macOS sandbox shared-memory restrictions prevent starting PostgreSQL here. The isolated browser suite uses actual Supabase Auth with random-password synthetic owner and outsider accounts; no test login bypass is included. Delia’s own account still needs handoff acceptance.
 
 ## Notifications and deployment
 

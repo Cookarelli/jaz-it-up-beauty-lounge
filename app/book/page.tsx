@@ -4,7 +4,7 @@ import { BookingForm } from "@/components/booking-form";
 import { catalog } from "@/lib/catalog";
 import { bookingOptions } from "@/lib/service-types";
 import { integrations } from "@/lib/integrations";
-import { smsReady } from "@/lib/integration-config";
+import { emailReady, smsReady } from "@/lib/integration-config";
 import { privilegedClient } from "@/lib/supabase";
 import { env } from "@/lib/env";
 export const metadata = {
@@ -20,13 +20,23 @@ export default async function Book({
   const { services, live } = await catalog();
   const options = bookingOptions(services);
   let allowSms = false;
-  if (smsReady(integrations) && env.SUPABASE_SECRET_KEY) {
+  let allowEmailReminders = false;
+  if (
+    (smsReady(integrations) || emailReady(integrations)) &&
+    env.SUPABASE_SECRET_KEY
+  ) {
     const s = await privilegedClient()
       .from("communication_settings")
-      .select("sms_enabled")
+      .select("sms_enabled,email_enabled,reminders_enabled")
       .limit(1)
       .maybeSingle();
-    allowSms = !s.error && s.data?.sms_enabled === true;
+    allowSms =
+      smsReady(integrations) && !s.error && s.data?.sms_enabled === true;
+    allowEmailReminders =
+      emailReady(integrations) &&
+      !s.error &&
+      s.data?.email_enabled === true &&
+      s.data?.reminders_enabled === true;
   }
   return (
     <section className="narrow">
@@ -37,6 +47,7 @@ export default async function Book({
         <BookingForm
           services={options}
           allowSms={allowSms}
+          allowEmailReminders={allowEmailReminders}
           initialSelection={selected.variant || selected.service}
         />
       ) : (

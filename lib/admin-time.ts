@@ -96,3 +96,24 @@ export const weekdays = [
   "Friday",
   "Saturday",
 ];
+
+/** Half-open intervals: a block ending at midnight does not close the next day. */
+export function overlapsDay(
+  startsAt: string,
+  endsAt: string,
+  day: string,
+  timezone: string,
+) {
+  return (
+    Date.parse(startsAt) <
+      Date.parse(localToISO(`${shiftDay(day, 1)}T00:00`, timezone)) &&
+    Date.parse(endsAt) > Date.parse(localToISO(`${day}T00:00`, timezone))
+  );
+}
+export function calendarHref(date: string, view: string, stylist = "") {
+  return `?${new URLSearchParams({ date, view, stylist })}`;
+}
+export function clockLabel(time: string) {
+  const [hour, minute] = time.split(":").map(Number);
+  return `${hour % 12 || 12}:${String(minute).padStart(2, "0")} ${hour >= 12 ? "PM" : "AM"}`;
+}

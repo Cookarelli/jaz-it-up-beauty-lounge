@@ -13,6 +13,9 @@ import {
   shiftDay,
   displayTime,
   weekdays,
+  overlapsDay,
+  calendarHref,
+  clockLabel,
 } from "@/lib/admin-time";
 import { AppointmentList } from "@/components/admin-appointments";
 export default async function Calendar({
@@ -30,20 +33,25 @@ export default async function Calendar({
     ? p.view!
     : "week";
   const range = calendarRange(date, view);
-  const [staff, bookings, blocks, closures] = await Promise.all([
+  const today = localDate(new Date(), salon.timezone);
+  const [staff, bookings, blocks, closures, business] = await Promise.all([
     db
       .from("stylists")
       .select("id,name,locations!inner(salon_id)")
       .eq("locations.salon_id", salon.id)
       .eq("active", true),
-    db
-      .from("appointments")
-      .select(appointmentFields, { count: "exact" })
-      .eq("services.salon_id", salon.id)
-      .gte("starts_at", localToISO(range.start + "T00:00", salon.timezone))
-      .lt("starts_at", localToISO(range.end + "T00:00", salon.timezone))
-      .order("starts_at")
-      .limit(1000),
+    (() => {
+      let query = db
+        .from("appointments")
+        .select(appointmentFields, { count: "exact" })
+        .eq("services.salon_id", salon.id)
+        .gte("starts_at", localToISO(range.start + "T00:00", salon.timezone))
+        .lt("starts_at", localToISO(range.end + "T00:00", salon.timezone))
+        .order("starts_at")
+        .limit(1000);
+      if (p.stylist) query = query.eq("stylist_id", p.stylist);
+      return query;
+    })(),
     db
       .from("time_blocks")
       .select("*")
@@ -56,8 +64,18 @@ export default async function Calendar({
       .eq("salon_id", salon.id)
       .gte("on_date", range.start)
       .lt("on_date", range.end),
+    db
+      .from("business_hours")
+      .select("weekday,opens_at,closes_at")
+      .eq("salon_id", salon.id),
   ]);
-  if (staff.error || bookings.error || blocks.error || closures.error)
+  if (
+    staff.error ||
+    bookings.error ||
+    blocks.error ||
+    closures.error ||
+    business.error
+  )
     throw Error("Calendar unavailable.");
   const rows = (bookings.data as Appointment[]).filter(
     (a) => !p.stylist || a.stylist_id === p.stylist,
@@ -70,6 +88,11 @@ export default async function Calendar({
           Add appointment
         </Link>
       </div>
+      <p>
+        Times are shown in {salon.timezone}. Service buffers reserve time
+        automatically; lunch breaks are never added.{" "}
+        <Link href="/admin/availability">Edit hours or block time off →</Link>
+      </p>
       <form method="get" className="filter-bar">
         <label>
           Date
@@ -96,21 +119,16 @@ export default async function Calendar({
         </label>
         <button>View calendar</button>
       </form>
-      <div className="calendar-navigation">
-        <Link
-          href={`?date=${shiftDay(range.start, -1)}&view=${view}&stylist=${p.stylist || ""}`}
-        >
+      <nav className="calendar-navigation" aria-label="Calendar navigation">
+        <Link href={calendarHref(today, view, p.stylist)}>Today</Link>
+        <Link href={calendarHref(shiftDay(range.start, -1), view, p.stylist)}>
           ← Previous
         </Link>
         <strong>
           {range.start} — {shiftDay(range.end, -1)}
         </strong>
-        <Link
-          href={`?date=${range.end}&view=${view}&stylist=${p.stylist || ""}`}
-        >
-          Next →
-        </Link>
-      </div>
+        <Link href={calendarHref(range.end, view, p.stylist)}>Next →</Link>
+      </nav>
       {(bookings.count || 0) > 1000 && (
         <p role="alert">
           This view exceeds 1,000 appointments. Use the daily view or booking
@@ -136,15 +154,27 @@ export default async function Calendar({
         {range.days.map((day) => (
           <article
             role="listitem"
-            className={`calendar-day ${day === localDate(new Date(), salon.timezone) ? "is-today" : ""}`}
+            className={`calendar-day ${day === today ? "is-today" : ""}`}
             key={day}
           >
             <h3>
-              <Link href={`?date=${day}&view=day`}>
+              <Link href={calendarHref(day, "day", p.stylist)}>
                 {weekdays[new Date(day + "T12:00Z").getUTCDay()].slice(0, 3)}{" "}
                 {day.slice(5)}
               </Link>
             </h3>
+            <p className="calendar-hours">
+              {(() => {
+                const h = business.data.find(
+                  (h) => h.weekday === new Date(day + "T12:00Z").getUTCDay(),
+                );
+                return h
+                  ? `Salon hours: ${clockLabel(h.opens_at)}–${clockLabel(h.closes_at)}`
+                  : business.data.length
+                    ? "Salon closed"
+                    : "Business hours not configured";
+              })()}
+            </p>
             {closures.data
               .filter(
                 (e) =>
@@ -163,14 +193,23 @@ export default async function Calendar({
               .filter(
                 (b) =>
                   (!p.stylist || b.stylist_id === p.stylist) &&
-                  localDate(b.starts_at, salon.timezone) <= day &&
-                  localDate(b.ends_at, salon.timezone) >= day,
+                  overlapsDay(b.starts_at, b.ends_at, day, salon.timezone),
               )
               .map((b) => (
                 <p className="calendar-block" key={b.id}>
-                  Time off · {b.note || "Unavailable"}
+                  Time off ·{" "}
+                  {staff.data.find((s) => s.id === b.stylist_id)?.name}
+                  <br />
+                  {displayTime(b.starts_at, salon.timezone, true)}–
+                  {displayTime(b.ends_at, salon.timezone, true)}
+                  <br />
+                  {b.note || "Unavailable"}
                 </p>
               ))}
+            {view !== "day" &&
+              !rows.some(
+                (a) => localDate(a.starts_at, salon.timezone) === day,
+              ) && <p className="calendar-empty">No appointments</p>}
             {view === "day" ? (
               <AppointmentList
                 appointments={rows.filter(
@@ -187,7 +226,10 @@ export default async function Calendar({
                     key={a.id}
                     href={`/admin/appointments/${a.id}`}
                   >
-                    <time>{displayTime(a.starts_at, salon.timezone)}</time>
+                    <time dateTime={a.starts_at}>
+                      {displayTime(a.starts_at, salon.timezone)}–
+                      {displayTime(a.ends_at, salon.timezone)}
+                    </time>
                     <strong>{a.client_name}</strong>
                     <span>{appointmentTitle(a)}</span>
                     <small>{a.status.replaceAll("_", " ")}</small>

@@ -1,16 +1,22 @@
 "use client";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { localDate } from "@/lib/admin-time";
 import { formatPrice, type BookingOption } from "@/lib/service-types";
 export function BookingForm({
   services,
   initialSelection,
   allowSms = false,
+  allowEmailReminders = false,
 }: {
   services: BookingOption[];
   initialSelection?: string;
   allowSms?: boolean;
+  allowEmailReminders?: boolean;
 }) {
+  const router = useRouter();
+  const lookup = useRef<AbortController | null>(null);
+  useEffect(() => () => lookup.current?.abort(), []);
   const [service, setService] = useState(
     services.some((s) => s.id === initialSelection)
       ? initialSelection!
@@ -23,6 +29,7 @@ export function BookingForm({
   const [slot, setSlot] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [checkout, setCheckout] = useState<{
     url: string;
@@ -36,17 +43,32 @@ export function BookingForm({
     id: string;
     token: string;
   } | null>(null);
+  const option = services.find((s) => s.id === service);
+  function clearAvailability() {
+    lookup.current?.abort();
+    lookup.current = null;
+    setBusy(false);
+    setSlots([]);
+    setSlot("");
+    setMessage("");
+  }
   async function find() {
+    if (!option || !date) return;
+    lookup.current?.abort();
+    const controller = new AbortController();
+    lookup.current = controller;
     setBusy(true);
+    setMessage("Looking for available times…");
     setSlot("");
     setSlots([]);
     try {
-      const option = services.find((s) => s.id === service)!;
       const r = await fetch(
         `/api/availability?service=${option.service_id}&date=${date}${option.variant_id ? `&variant=${option.variant_id}` : ""}`,
+        { signal: controller.signal },
       );
       const d = await r.json();
       if (!r.ok) throw Error(d.error);
+      if (controller.signal.aborted) return;
       setSlots(d.slots);
       setMessage(
         d.slots.length
@@ -54,20 +76,23 @@ export function BookingForm({
           : "No openings on this date. Try another day.",
       );
     } catch {
+      if (controller.signal.aborted) return;
       setMessage("Availability is temporarily unavailable. Please try again.");
     } finally {
-      setBusy(false);
+      if (lookup.current === controller) setBusy(false);
     }
   }
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setSubmitting(true);
     setBusy(true);
     const f = new FormData(e.currentTarget);
     try {
-      const selected = slots[Number(slot)];
+      const selected = slot === "" ? null : slots[Number(slot)];
+      if (!selected || !option) throw Error("Choose an available time first.");
       const booking = {
-        service_id: services.find((s) => s.id === service)!.service_id,
-        variant_id: services.find((s) => s.id === service)!.variant_id ?? null,
+        service_id: option.service_id,
+        variant_id: option.variant_id ?? null,
         ...selected,
         name: f.get("name"),
         email: f.get("email"),
@@ -112,14 +137,16 @@ export function BookingForm({
       } else {
         setDone(true);
         setMessage(
-          `Your appointment is confirmed. Reference: ${d.reference}. Save this reference.`,
+          `Your appointment is confirmed. Reference: ${d.reference}. Opening your visit details…`,
         );
+        router.push(`/booking-status?id=${d.request_id}`);
       }
     } catch (err) {
       setMessage(
         err instanceof Error ? err.message : "Could not book. Please retry.",
       );
     } finally {
+      setSubmitting(false);
       setBusy(false);
     }
   }
@@ -153,15 +180,21 @@ export function BookingForm({
         </article>
       )}
       {!done && !checkout && (
-        <form onSubmit={submit}>
+        <form onSubmit={submit} className="booking-form">
+          <h2>1. Choose your visit</h2>
+          <p className="booking-help">
+            All times are Central Time (America/Chicago), including daylight
+            saving time. Only available times that fit the complete service and
+            its buffers are shown.
+          </p>
           <label>
             Service
             <select
               value={service}
+              disabled={submitting}
               onChange={(e) => {
                 setService(e.target.value);
-                setSlots([]);
-                setSlot("");
+                clearAvailability();
               }}
               required
             >
@@ -172,17 +205,39 @@ export function BookingForm({
               ))}
             </select>
           </label>
+          {option && (
+            <aside className="booking-summary" aria-label="Selected service">
+              <strong>{option.name}</strong>
+              <span>
+                {option.duration_minutes} minutes · {formatPrice(option)}
+              </span>
+              {option.length_qualification && (
+                <span>{option.length_qualification}</span>
+              )}
+              {option.includes_cut_style && (
+                <span>Haircut and style included.</span>
+              )}
+              {!!(option.preparation_minutes + option.cleanup_minutes) && (
+                <small>
+                  We also reserve{" "}
+                  {option.preparation_minutes + option.cleanup_minutes} minutes
+                  for preparation and cleanup.
+                </small>
+              )}
+              <small>The salon confirms your final service total.</small>
+            </aside>
+          )}
           <label>
             Preferred date
             <input
               type="date"
               required
               value={date}
+              disabled={submitting}
               min={localDate()}
               onChange={(e) => {
                 setDate(e.target.value);
-                setSlots([]);
-                setSlot("");
+                clearAvailability();
               }}
             />
           </label>
@@ -190,10 +245,11 @@ export function BookingForm({
             Find available times
           </button>
           <label>
-            Time (salon local time)
+            Time (Central Time)
             <select
               required
               value={slot}
+              disabled={!slots.length || busy}
               onChange={(e) => setSlot(e.target.value)}
             >
               <option value="">Choose a time</option>
@@ -208,9 +264,16 @@ export function BookingForm({
               ))}
             </select>
           </label>
+          <h2>2. Your contact details</h2>
           <label>
             Your name
-            <input name="name" autoComplete="name" required maxLength={100} />
+            <input
+              name="name"
+              autoComplete="name"
+              required
+              minLength={2}
+              maxLength={100}
+            />
           </label>
           <label>
             Email
@@ -238,14 +301,19 @@ export function BookingForm({
             <input name="website" tabIndex={-1} autoComplete="off" />
           </label>
           <p className="muted">
-            We use your email for this appointment’s confirmation and changes.{" "}
+            Save the confirmation page after booking. Email and text delivery
+            are only available when enabled by the salon; do not rely on a
+            message to confirm your visit.{" "}
             <a href="/privacy">Privacy and message preferences</a>.
           </p>
-          <label>
-            <input type="checkbox" name="email_reminders_consent" /> I would
-            also like email reminders, if the salon enables them. Optional;
-            unsubscribe at any time.
-          </label>
+          {allowEmailReminders && (
+            <label>
+              <span>
+                <input type="checkbox" name="email_reminders_consent" /> I would
+                also like email reminders. Optional; unsubscribe at any time.
+              </span>
+            </label>
+          )}
           {allowSms && (
             <label>
               <input type="checkbox" name="sms_consent" /> I agree to receive
@@ -255,6 +323,25 @@ export function BookingForm({
               to opt out or contact the salon for help.
             </label>
           )}
+          <h2>3. Reserve your time</h2>
+          {slot !== "" && slots[Number(slot)] && (
+            <p className="booking-summary">
+              {option?.name} ·{" "}
+              {new Date(slots[Number(slot)].starts_at).toLocaleString("en-US", {
+                timeZone: "America/Chicago",
+                weekday: "long",
+                month: "long",
+                day: "numeric",
+                hour: "numeric",
+                minute: "2-digit",
+                timeZoneName: "short",
+              })}
+            </p>
+          )}
+          <p className="booking-help">
+            Your time is reserved only when you see a confirmed booking. If
+            another customer takes this time first, choose a new opening.
+          </p>
           <button disabled={busy || slot === ""} type="submit">
             {busy ? "Please wait…" : "Reserve appointment"}
           </button>

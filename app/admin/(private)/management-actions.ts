@@ -136,7 +136,7 @@ export async function createAppointment(
     refresh();
     return {
       message:
-        "Appointment added. Email notifications are queued when an email is available.",
+        "Appointment added. Share the visit details with the customer; automatic delivery depends on approved messaging settings.",
       saved: true,
       href: `/admin/appointments/${r.data}`,
     };

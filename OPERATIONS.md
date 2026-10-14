@@ -2,6 +2,14 @@
 
 Start with [LAUNCH_CHECKLIST.md](LAUNCH_CHECKLIST.md). Code verification is complete only within the limits recorded there. The salon's hosted booking, owner sign-in, provider delivery and restore drill still need acceptance. Nothing in this document authorizes paid subscriptions, real messages, live payments or public launch.
 
+## Current development budget and accepted limitation
+
+Until the salon client pays for the application, optional service spend is **$0**. Keep the existing Supabase Free project and GitHub repository; use Vercel Hobby only for permitted development/preview testing. No upgrade, subscription, domain, paid add-on, cron service or extra hosted test project is authorized. Messaging, payments, indexing and public booking stay disabled. Use [disposable local/CI testing](docs/ISOLATED_TESTING.md) with synthetic customers instead of another cloud project.
+
+Supabase’s disabled leaked-password-protection warning is an **accepted temporary Free-plan limitation**, not fixed. Keep the existing strong password settings, restricted Auth sign-ups, admin role checks, RLS and secure credentials. Do not weaken policies to silence informational RLS notices. No live migration is needed for this development pass; **do not modify or rerun the 11 applied migrations**. Reconsider the advisory during a separately approved future launch/security review, without requiring an upgrade now.
+
+Delia’s day-to-day instructions and the remaining menu/business decisions are in [DELIA_WALKTHROUGH.md](docs/DELIA_WALKTHROUGH.md).
+
 ## GitHub → Mac Mini
 
 Install Git (`xcode-select --install` if needed) and Node 24 LTS from the official Node distribution or an existing version manager. Authenticate to GitHub if the repository is private. Then:
@@ -37,7 +45,7 @@ GitHub Quality runs Node 24 and a disposable PostgreSQL 17 service. For local DB
 
 ## Environment variables
 
-Use separate Supabase projects and provider test credentials for preview and production. Set Vercel server credentials as Secrets, scoped to the intended environment. Only the three `NEXT_PUBLIC_` values below may appear in browser assets. Do not paste credentials into chat, Git, issue comments, logs or screenshots. Integration-generated names such as `SUPABASE_SERVICE_ROLE_KEY` do not automatically populate the app's `SUPABASE_SECRET_KEY`; configure the exact names below.
+Use disposable local Supabase for current functional testing. A future hosted acceptance environment must be isolated from production; its creation and any cost require separate approval. Set Vercel server credentials as Secrets, scoped to the intended environment. Only the three `NEXT_PUBLIC_` values below may appear in browser assets. Do not paste credentials into chat, Git, issue comments, logs or screenshots. Integration-generated names such as `SUPABASE_SERVICE_ROLE_KEY` do not automatically populate the app's `SUPABASE_SECRET_KEY`; configure the exact names below.
 
 | Variable | Requirement |
 | --- | --- |
@@ -63,7 +71,7 @@ Blank optional values are ignored. Boolean switches accept literal `true` or `fa
 
 ## Supabase setup and migrations
 
-The existing project is **Jaz It Up**, reference `fwxothhjxtvuupyeqsri`, organization **OptAImal LLC**. Do not create another production project accidentally. If an isolated test project is needed, the account owner selects its region/plan and approves any cost first; use an empty project with no copied client data. The seed includes the approved service board and confirmed hours, but no real customers or Auth users.
+The existing project is **Jaz It Up**, reference `fwxothhjxtvuupyeqsri`, organization **OptAImal LLC**. Do not create another production project accidentally. For current tests, use the disposable local container stack instead of creating another hosted project. The seed includes the approved service board and confirmed hours, but no real customers or Auth users.
 
 Before any migration: record the deployed app commit and migration list; pause deployments and scheduled workers; keep public booking/messages/payments off; take and verify a recoverable backup. Rehearse the complete history on the empty test project. From a trusted terminal in this repository:
 
@@ -87,7 +95,7 @@ After applying: re-read history; verify `communication_settings`, `booking_reque
 
 ## Provision Delia and recover access
 
-1. Disable public Auth sign-ups. Set the exact HTTPS site URL and approved redirects for each isolated environment. Review Supabase Auth rate limits and [password protection](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection). The live audit reported leaked-password protection disabled; enable if supported by the chosen plan or record the owner-approved alternative.
+1. Disable public Auth sign-ups. Set the exact HTTPS site URL and approved redirects for each isolated environment. Review Supabase Auth rate limits and [password protection](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection). The live audit reported leaked-password protection disabled. The project owner has accepted this temporary Free-plan limitation; it remains unresolved and no upgrade is authorized.
 2. Delia supplies her own email directly to the trusted operator. Create an Auth user using that verified address and a unique random 20+ character password saved in her password manager. Verify ownership before marking confirmed. Delia enters credentials herself; never send a predictable password or a bare account-creation link.
 3. Put the verified Auth UUID, salon UUID and server credential in ignored local environment variables. Run `node --env-file=.env.local scripts/provision-admin.mjs`. The script checks an existing confirmed, non-anonymous account and salon, then grants that one owner membership. Remove temporary provisioning variables. No password, invite or email is generated.
 4. Test `/admin/login`, private pages, edits and sign-out. Test an unrelated ordinary account against the test project; it must not read customers. Remove the temporary operator owner's membership only after Delia's independent access is verified. Staff roles are salon-scoped; owner/manager can administer, stylist cannot. Every action checks current authorization, even with a still-valid session.
@@ -98,9 +106,9 @@ There is currently **no in-app password-reset callback/form or MFA-enforcement f
 
 **Current safety state:** No production deployment. The first automatic audit-branch build unexpectedly targeted Production despite the configured production branch being `main`; it reached READY before cancellation. Booking/messages/payments stayed disabled. Production was paused immediately. Vercel then blocked new preview builds while paused, so the user explicitly approved deletion of that one generated deployment. The project was resumed only after the dashboard showed no production deployment. Use explicit Preview creation and keep automatic Git deployment disabled until release approval.
 
-The project `jaz-it-up-beauty-lounge` belongs to team `steves-projects-e37a4ef4` and is linked to this GitHub repository. The connector's project-detail API returned a team authorization error; browser access confirmed the project and the team's current Hobby plan. A suitable commercial plan remains a launch requirement; no upgrade was made. The Supabase integration supplied the public URL/key and server secret with **Production-only** scope. Preview has no database variables. The canonical site URL and rate-limit secret are still missing. Verify current settings in the dashboard rather than treating integration connection as deployment success.
+The project `jaz-it-up-beauty-lounge` belongs to team `steves-projects-e37a4ef4` and is linked to this GitHub repository. The connector's project-detail API returned a team authorization error; browser access confirmed the project and the team's current Hobby plan. Hosting eligibility for commercial launch must be reviewed after the client pays; the present scope is permitted Hobby development/preview use only. No upgrade was made or is authorized now. The Supabase integration supplied the public URL/key and server secret with **Production-only** scope. Preview has no database variables. The canonical site URL and rate-limit secret are still missing. Verify current settings in the dashboard rather than treating integration connection as deployment success.
 
-1. Use the intended team and an owner-approved commercial hosting plan. Root directory is the repository root, framework Next.js, Node 24, install `npm ci`, build `npm run build`. No paid upgrade is performed by these instructions.
+1. For current development previews, retain the intended team’s Hobby plan. Revisit suitable commercial hosting only for a separately approved future release after payment. Root directory is the repository root, framework Next.js, Node 24, install `npm ci`, build `npm run build`. No paid upgrade is performed by these instructions.
 2. Before pushing `main`, retain the repository's `vercel.json` rule `git.deploymentEnabled=false`. This blocks automatic Git deployments; create previews explicitly using Deployments → Create Deployment and verify the Preview target ([Vercel configuration](https://vercel.com/docs/project-configuration/git-configuration)). Remove this rule only in a separately approved release after P0 acceptance; it does not prevent someone explicitly deploying production from the CLI/dashboard. Select the reviewed audit-branch commit explicitly. Protect previews with Vercel Authentication; do not disable protection to make a test pass.
 3. Scope preview variables to the isolated test project and test provider accounts. Production gets the live project only. Keep all release/integration flags off initially. Set the exact preview canonical URL and approved Auth redirect before testing; a stable branch hostname is useful.
 4. Deploy the reviewed branch as **Preview**, verify its Git SHA and READY status, inspect build/runtime logs and run the script below. A green build is not a successful booking test. Do not promote a release with unchecked P0 items.
@@ -173,7 +181,9 @@ If an incident occurs:
 4. Before workers restart, reconcile notification IDs/accepted deliveries, opt-outs, payment events/refunds and checkout holds against providers. A restored older queue could otherwise resend messages or forget payments. Do not replay unknown SMS or expired email idempotency keys blindly. Reapply verified customer-erasure requests.
 5. Re-provision correct configuration, re-run RLS/admin/booking/DST checks, verify alerts and obtain owner approval to reopen. Rotate exposed credentials and revoke sessions if a security incident occurred. Document cause, affected interval and follow-up.
 
-## Expected recurring costs
+## Deferred launch cost planning — no purchase authorized
+
+Current optional service budget: **$0**. Existing Supabase Free and permitted Vercel Hobby development previews remain in place. The figures below are historical launch planning references only, not required development expenses or a recommendation to upgrade now. Do not configure paid overage, purchase domains or activate providers.
 
 Indicative US pricing checked October 14, 2026; no plan was purchased or upgraded in this audit. Verify provider pages before committing. Existing billing plans and usage have not been approved here.
 
@@ -187,4 +197,4 @@ Indicative US pricing checked October 14, 2026; no plan was purchased or upgrade
 | [Stripe](https://stripe.com/pricing) | Optional standard domestic US online card rate 2.9% + 30¢/successful charge; other card types, refunds and disputes differ. |
 | Domain / recovery / monitoring | Domain renewal, email mailbox, backup storage, extra test project and optional alert/PITR services cost separately. |
 
-A single small production project on the starting Vercel Pro + Supabase Pro tiers is roughly **$45/month before tax, domain, extra seats/projects, provider charges and usage**. This is a planning baseline, not a quote or authorization to buy.
+If both paid tiers were later selected, their listed base prices total $45/month before tax and extras. Supabase Pro is not a requirement for current development. This is an optional future example, not a committed expense or authorization to buy.

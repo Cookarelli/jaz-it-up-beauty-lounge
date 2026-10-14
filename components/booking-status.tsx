@@ -3,6 +3,13 @@ import { useEffect, useState } from "react";
 import { remainingBalance } from "@/lib/payments/core";
 type Status = {
   status: string;
+  appointment: {
+    starts_at: string;
+    ends_at: string;
+    service: string;
+    includes_cut_style: boolean;
+    timezone: string;
+  } | null;
   reference: string | null;
   estimate_cents: number;
   deposit_cents: number;
@@ -16,8 +23,11 @@ export function BookingStatus({ id }: { id: string }) {
   useEffect(() => {
     let active = true;
     let pending = true;
+    let loading = false;
+    const controller = new AbortController();
     async function load() {
-      if (!active || !pending) return;
+      if (!active || !pending || loading) return;
+      loading = true;
       try {
         const token = sessionStorage.getItem(`booking:${id}`);
         if (!token)
@@ -26,6 +36,7 @@ export function BookingStatus({ id }: { id: string }) {
           );
         const r = await fetch("/api/booking-status", {
           method: "POST",
+          signal: controller.signal,
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ id, token }),
         });
@@ -39,12 +50,15 @@ export function BookingStatus({ id }: { id: string }) {
       } catch (e) {
         if (active)
           setError(e instanceof Error ? e.message : "Status unavailable.");
+      } finally {
+        loading = false;
       }
     }
     void load();
     const timer = setInterval(load, 5000);
     return () => {
       active = false;
+      controller.abort();
       clearInterval(timer);
     };
   }, [id]);
@@ -90,7 +104,45 @@ export function BookingStatus({ id }: { id: string }) {
       {data ? (
         <>
           <h2>{labels[data.status] || "Check with the salon"}</h2>
-          {data.reference && <p>Booking reference: {data.reference}</p>}
+          {data.appointment && (
+            <article className="booking-summary" aria-label="Your visit">
+              <strong>{data.appointment.service}</strong>
+              <time dateTime={data.appointment.starts_at}>
+                {new Date(data.appointment.starts_at).toLocaleString("en-US", {
+                  timeZone: data.appointment.timezone,
+                  weekday: "long",
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                  hour: "numeric",
+                  minute: "2-digit",
+                  timeZoneName: "short",
+                })}
+              </time>
+              <span>
+                {Math.round(
+                  (Date.parse(data.appointment.ends_at) -
+                    Date.parse(data.appointment.starts_at)) /
+                    60000,
+                )}{" "}
+                minutes
+              </span>
+              {data.appointment.includes_cut_style && (
+                <span>Haircut and style included.</span>
+              )}
+            </article>
+          )}
+          {data.reference && (
+            <p className="booking-reference">
+              Booking reference: {data.reference}
+            </p>
+          )}
+          {data.status === "confirmed" && (
+            <p>
+              Save these details. Contact the salon to change or cancel your
+              visit. Email and text delivery depend on the salon’s settings.
+            </p>
+          )}
           <p>
             Estimated service cost: ${(data.estimate_cents / 100).toFixed(2)} ·
             Required deposit: ${(data.deposit_cents / 100).toFixed(2)} · Paid: $

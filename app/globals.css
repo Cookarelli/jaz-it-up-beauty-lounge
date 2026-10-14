@@ -732,3 +732,15 @@ details.card > summary {
 .mobile summary { min-height: 44px; display: flex; align-items: center; }
 .card, .notice, p[role="status"] { overflow-wrap: anywhere; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; } }
+
+/* Booking steps share the salon's cream, teal and muted gold palette. */
+.booking-form h2 { font-size: 1.6rem; margin: 24px 0 0; border-top: 1px solid #d8dccc; padding-top: 24px; }
+.booking-form h2:first-child { border: 0; padding-top: 0; }
+.booking-help { font-size: 14px; line-height: 1.65; margin: 0; }
+.booking-summary { display: grid; gap: 8px; background: #e9eee3; border-left: 3px solid var(--gold); padding: 20px; border-radius: 0 8px 8px 0; }
+.booking-reference { overflow-wrap: anywhere; }
+.hours-inputs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.calendar-hours, .calendar-empty { font-size: 12px; line-height: 1.5; }
+.calendar-hours { color: var(--teal); }
+.calendar-navigation a { min-height: 44px; display: inline-flex; align-items: center; }
+@media (max-width: 760px) { input, select, textarea { font-size: 16px; min-width: 0; } .booking-form button { min-height: 48px; } }

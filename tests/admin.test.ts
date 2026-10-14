@@ -6,6 +6,9 @@ import {
   calendarRange,
   localInput,
   validDate,
+  overlapsDay,
+  calendarHref,
+  clockLabel,
 } from "../lib/admin-time";
 import {
   customerSchema,
@@ -172,4 +175,54 @@ test("Chicago 9 AM stays local across both DST transition weekends", () => {
     assert.equal(localToISO(`${day}T09:00`, "America/Chicago"), utc);
     assert.equal(localInput(utc, "America/Chicago"), `${day}T09:00`);
   }
+});
+
+test("calendar blocks use exclusive ends, including Chicago DST days", () => {
+  const zone = "America/Chicago";
+  assert.equal(
+    overlapsDay(
+      "2026-10-14T22:00:00Z",
+      "2026-10-15T05:00:00Z",
+      "2026-10-15",
+      zone,
+    ),
+    false,
+  );
+  assert.equal(
+    overlapsDay(
+      "2026-10-14T22:00:00Z",
+      "2026-10-15T05:00:01Z",
+      "2026-10-15",
+      zone,
+    ),
+    true,
+  );
+  assert.equal(
+    overlapsDay(
+      "2026-11-01T05:00:00Z",
+      "2026-11-02T06:00:00Z",
+      "2026-11-01",
+      zone,
+    ),
+    true,
+  );
+  assert.equal(
+    overlapsDay(
+      "2026-11-01T05:00:00Z",
+      "2026-11-02T06:00:00Z",
+      "2026-11-02",
+      zone,
+    ),
+    false,
+  );
+});
+test("calendar navigation retains stylist and formats owner hours", () => {
+  const query = new URLSearchParams(
+    calendarHref("2026-10-17", "day", "stylist-1").slice(1),
+  );
+  assert.equal(query.get("stylist"), "stylist-1");
+  assert.equal(query.get("date"), "2026-10-17");
+  assert.equal(clockLabel("09:00:00"), "9:00 AM");
+  assert.equal(clockLabel("19:00:00"), "7:00 PM");
+  assert.equal(clockLabel("15:00:00"), "3:00 PM");
 });
