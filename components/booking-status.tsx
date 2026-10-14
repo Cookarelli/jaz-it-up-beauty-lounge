@@ -15,7 +15,9 @@ export function BookingStatus({ id }: { id: string }) {
     [error, setError] = useState("");
   useEffect(() => {
     let active = true;
+    let pending = true;
     async function load() {
+      if (!active || !pending) return;
       try {
         const token = sessionStorage.getItem(`booking:${id}`);
         if (!token)
@@ -30,6 +32,7 @@ export function BookingStatus({ id }: { id: string }) {
         const d = await r.json();
         if (!r.ok) throw Error(d.error);
         if (active) {
+          pending = d.status === "pending";
           setData(d);
           setError("");
         }
@@ -48,18 +51,25 @@ export function BookingStatus({ id }: { id: string }) {
   async function cancel() {
     if (!window.confirm("End this unpaid checkout and release the time?"))
       return;
-    const r = await fetch("/api/booking-cancel", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        id,
-        token: sessionStorage.getItem(`booking:${id}`),
-      }),
-    });
-    const d = await r.json();
-    if (!r.ok) setError(d.error);
-    else setData((x) => (x ? { ...x, status: "expired" } : x));
+    try {
+      const r = await fetch("/api/booking-cancel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id,
+          token: sessionStorage.getItem(`booking:${id}`),
+        }),
+      });
+      const d = await r.json();
+      if (!r.ok) setError(d.error);
+      else setData((x) => (x ? { ...x, status: "expired" } : x));
+    } catch {
+      setError(
+        "Could not reach the salon. The temporary hold will still expire automatically.",
+      );
+    }
   }
+
   const labels: Record<string, string> = {
     cancelled:
       "Your appointment has been cancelled. Contact the salon about any deposit refund",

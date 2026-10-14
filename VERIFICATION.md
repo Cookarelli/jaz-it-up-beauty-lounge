@@ -7,7 +7,7 @@ Story: an authorized salon owner signs in, manages appointments/customers/hours/
 - Every private page and action verifies Supabase Auth and current staff membership. RLS independently scopes table operations to the salon. No service key enters a client component.
 - TypeScript, lint, 24 unit/validation tests and optimized Next.js build pass.
 - Database suites replay all migrations on disposable PostgreSQL 17 in GitHub CI. Local PostgreSQL startup is blocked by sandbox shared-memory permissions. Long live test transactions were rejected by the connector with `Invalid or expired requestState`; no live test success is claimed for this release.
-- Migrations are applied to the existing salon Supabase project; no new cloud resources or payment integrations were created.
+- Dashboard migrations (through the confirmed-schedule update below) are applied to the existing salon Supabase project. The later communications migration is pending as documented below; no new cloud resources were created.
 - UI uses associated labels, keyboard-accessible controls, live error/status messages, native confirmation dialogs, responsive columns and tablet/mobile calendar layouts.
 - Remaining acceptance: sign in with Delia’s provisioned account and verify owner screens against real salon configuration, configure provider email delivery, and exercise simultaneous reservations under load. No real customer data or test passwords are tracked.
 
@@ -26,3 +26,6 @@ Story: guest booking creates either a confirmed no-deposit appointment or a boun
 - All delivery and payment switches default off. Tests use synthetic records and fake transports; no real messages or cards.
 - Added 11 provider/configuration/template/capability/payment tests (35 total unit tests), plus a transactional database workflow suite.
 - Local lint, TypeScript, unit tests and production build pass. Production dependency audit reports zero vulnerabilities. Provider credentials, deployed scheduler and live/sandbox provider acceptance are not claimed.
+- GitHub CI passed a clean PostgreSQL migration replay and all four SQL suites on the initial implementation. The live migration tool returned `Invalid or expired requestState`; read-back confirmed no partial application (both new tables absent, original appointment count unchanged). The new migration remains a documented deployment prerequisite.
+
+- Production-server smoke checks passed: public catalog/booking/preferences/status pages render, unsigned admin requests redirect to login, cron rejects unsigned requests, unconfigured webhooks return 503, and booking status/cancellation reject missing capabilities/origin. These checks sent no provider messages or payments.

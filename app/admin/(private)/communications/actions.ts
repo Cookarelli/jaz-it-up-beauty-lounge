@@ -105,16 +105,14 @@ export async function verifyPayments(
       .eq("salon_id", salon.id)
       .maybeSingle();
     if (old.error) throw old.error;
-    const r = await db
-      .from("payment_readiness")
-      .upsert({
-        salon_id: salon.id,
-        ...verified,
-        webhook_seen_at:
-          old.data?.credential_fingerprint === verified.credential_fingerprint
-            ? old.data.webhook_seen_at
-            : null,
-      });
+    const r = await db.from("payment_readiness").upsert({
+      salon_id: salon.id,
+      ...verified,
+      webhook_seen_at:
+        old.data?.credential_fingerprint === verified.credential_fingerprint
+          ? old.data.webhook_seen_at
+          : null,
+    });
     if (r.error) throw Error("Could not record verification.");
     revalidatePath("/admin/payments");
     return {
@@ -242,6 +240,43 @@ export async function retryMessage(
     revalidatePath("/admin/communications");
     return {
       message: "Queued with its original message and idempotency key.",
+      saved: true,
+    };
+  } catch (e) {
+    return failure(e);
+  }
+}
+
+export async function stopMessages(
+  _: AdminState,
+  form: FormData,
+): Promise<AdminState> {
+  try {
+    const { salon } = await ownerContext();
+    const id = z.uuid().parse(form.get("id")),
+      channel = z.enum(["email", "sms"]).parse(form.get("channel"));
+    const db = privilegedClient();
+    const a = await db
+      .from("appointments")
+      .select("email,phone,services!inner(salon_id)")
+      .eq("id", id)
+      .eq("services.salon_id", salon.id)
+      .single();
+    if (a.error) throw Error("Appointment unavailable.");
+    const target = channel === "email" ? a.data.email : a.data.phone;
+    if (!target) throw Error("No contact supplied.");
+    const r = await db.rpc("suppress_contact", {
+      p_salon: salon.id,
+      p_channel: channel,
+      p_target: target,
+      p_reason: "customer_opt_out",
+    });
+    if (r.error) throw Error("Preference could not be saved.");
+    revalidatePath(`/admin/appointments/${id}`);
+    revalidatePath("/admin/communications");
+    return {
+      message:
+        "Messages to this contact have been stopped. The appointment is unchanged.",
       saved: true,
     };
   } catch (e) {

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { stopMessages } from "../../communications/actions";
 import { notFound } from "next/navigation";
 import {
   adminContext,
@@ -25,7 +26,12 @@ export default async function AppointmentDetail({
     .maybeSingle();
   if (r.error) throw Error("Appointment unavailable.");
   if (!r.data) notFound();
-  const a = r.data as Appointment;
+  const a = r.data as Appointment & {
+    email_reminders_consent: boolean;
+    sms_consent: boolean;
+    consent_recorded_at: string | null;
+    consent_version: string | null;
+  };
   const audit = await db
     .from("audit_logs")
     .select("id,action,created_at,changes")
@@ -137,6 +143,35 @@ export default async function AppointmentDetail({
           </AdminForm>
         </div>
       </div>
+      <article className="card">
+        <h3>Message consent & preferences</h3>
+        <p>
+          Email reminders:{" "}
+          {a.email_reminders_consent ? "opted in" : "not opted in"}. SMS:{" "}
+          {a.sms_consent ? "opted in" : "not opted in"}. Existing opt-outs also
+          apply.
+        </p>
+        {a.consent_recorded_at && (
+          <p>
+            Recorded {displayTime(a.consent_recorded_at, salon.timezone, true)}{" "}
+            · {a.consent_version}
+          </p>
+        )}
+        <AdminForm
+          action={stopMessages}
+          label="Stop messages"
+          confirm="Record the customer’s opt-out and suppress future messages to this contact? This does not cancel their appointment."
+        >
+          <input type="hidden" name="id" value={a.id} />
+          <label>
+            Contact channel
+            <select name="channel">
+              <option value="email">Email</option>
+              <option value="sms">Text messages</option>
+            </select>
+          </label>
+        </AdminForm>
+      </article>
       <h3>Recent changes</h3>
       <ul>
         {audit.data.map((log) => (

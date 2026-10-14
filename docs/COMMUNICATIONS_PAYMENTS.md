@@ -4,10 +4,24 @@ This release adds provider adapters and a guarded payment flow. **All external d
 
 ## Apply and deploy
 
+The connected Supabase migration tool returned `McpServerError: Invalid or expired requestState` during this update. A subsequent read confirmed that the new tables and migration are absent. **This migration is pending on the salon project; it passed on the disposable CI database.** Apply it before deploying the matching application.
+
 1. Take a database backup and check migration history. An environment at main `08485ca` needs only `supabase/migrations/20261014184518_communications_and_optional_deposits.sql`. Older environments need their intervening migrations, in order. Do not rerun applied migrations. The migration preserves old notification history, suppresses the unapproved legacy queue and replaces its sender; deploy the matching app immediately after migrating. Old deployed workers cannot claim the new queue.
 2. Deploy this commit with Node 24, the public Supabase URL/publishable key, server-only `SUPABASE_SECRET_KEY`, and a canonical HTTPS `NEXT_PUBLIC_SITE_URL`. Separate preview/test and production databases and provider credentials. No credentials belong in Git or database tables.
 3. Sign in with an authorized owner at `/admin/login`. Set actual salon phone, email and address under Salon & policies. Approve the remaining service prices/durations before customers can book them.
 4. Keep `.env.local` ignored. `.env.example` lists every variable. Resend, Twilio and Stripe keys must never use `NEXT_PUBLIC_`. Build success does not mean any provider or deployment is activated.
+
+If the connector error persists, apply the migration from a trusted terminal with the Supabase CLI, signed in to the project organization. Run from the repository root:
+
+```sh
+npx supabase login
+npx supabase link --project-ref fwxothhjxtvuupyeqsri
+npx supabase db push --linked --dry-run --skip-vault
+# Review the pending filenames; then apply:
+npx supabase db push --linked --skip-vault
+```
+
+Use the CLI's interactive authentication/database-password prompts; never put secrets in command arguments, chat or Git. The dry run should list only unapplied migrations. Stop and reconcile unexpected history instead of using `--include-all`, replaying seeds or resetting the live database. Verify the new migration in Supabase migration history and the presence of `communication_settings`, `booking_requests` and `payment_readiness` before deploying.
 
 ## Email setup (Resend)
 

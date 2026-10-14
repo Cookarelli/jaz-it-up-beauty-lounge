@@ -27,10 +27,7 @@ export async function POST(req: Request) {
         (p.Body || "").trim(),
       )
     ) {
-      const salons = await db
-        .from("communication_settings")
-        .select("salon_id")
-        .eq("sms_enabled", true);
+      const salons = await db.from("communication_settings").select("salon_id");
       if (salons.error) throw salons.error;
       for (const s of salons.data) {
         const result = await db.rpc("suppress_contact", {

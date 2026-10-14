@@ -79,6 +79,19 @@ do $$ declare salon uuid;stylist uuid;service uuid;start_at timestamptz;r public
  if (select state from public.notification_jobs where public.notification_jobs.id=j.id)<>'unknown' then raise exception 'TEST: email retried beyond provider key retention';end if;
  perform public.suppress_contact(salon,'email','fixture-paid@example.invalid','customer_opt_out');
  if public.message_is_current(j.id) then raise exception 'TEST: opt-out ignored';end if;
+ -- SMS lease crashes never authorize a second provider call; stale reminders expire.
+ update public.booking_policies set payments_enabled=false where salon_id=salon;
+ update public.communication_settings set sms_enabled=true where salon_id=salon;
+ b=b||jsonb_build_object('starts_at',start_at+interval '4 hours','email','fixture-sms@example.invalid','sms_consent',true,'email_reminders_consent',true);
+ r=public.begin_booking(gen_random_uuid(),repeat('a',64),b);
+ select * into strict j from public.claim_messages('sms');
+ update public.notification_jobs set locked_until=now()-interval '1 minute' where public.notification_jobs.id=j.id;
+ if exists(select 1 from public.claim_messages('sms')) or (select state from public.notification_jobs where public.notification_jobs.id=j.id)<>'unknown' then raise exception 'TEST: ambiguous SMS was retried';end if;
+ update public.notification_jobs set due_at=now()-interval '31 minutes',expires_at=now()-interval '1 minute' where appointment_id=r.appointment_id and kind='reminder';
+ perform public.claim_messages('email');
+ if exists(select 1 from public.notification_jobs where appointment_id=r.appointment_id and kind='reminder' and state<>'suppressed') then raise exception 'TEST: overdue reminders still eligible';end if;
+ perform public.suppress_contact(salon,'sms','+15550000001','provider_opt_out');
+ if not exists(select 1 from public.message_suppressions where salon_id=salon and channel='sms') then raise exception 'TEST: SMS STOP not persisted';end if;
  insert into auth.users(id,email) values(gen_random_uuid(),'communications-owner@example.invalid') returning id into owner_id;
  insert into auth.users(id,email) values(gen_random_uuid(),'communications-outsider@example.invalid') returning id into outsider;
  insert into public.staff_roles(salon_id,user_id,role) values(salon,owner_id,'owner');

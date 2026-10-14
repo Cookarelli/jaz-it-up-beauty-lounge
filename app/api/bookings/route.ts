@@ -52,7 +52,8 @@ export async function POST(req: Request) {
         },
         { status: 409 },
       );
-    const r = data as BookingRequest;
+    const r = (Array.isArray(data) ? data[0] : data) as BookingRequest;
+    if (!r?.id) throw Error("Invalid booking response");
     if (r.status === "confirmed")
       return Response.json(
         { status: r.status, reference: r.appointment_id, request_id: r.id },
