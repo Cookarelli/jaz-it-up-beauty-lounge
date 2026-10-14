@@ -4,9 +4,9 @@ This release adds provider adapters and a guarded payment flow. **All external d
 
 ## Apply and deploy
 
-The connected Supabase migration tool returned `McpServerError: Invalid or expired requestState` during this update. A subsequent read confirmed that the new tables and migration are absent. **This migration is pending on the salon project; it passed on the disposable CI database.** Apply it before deploying the matching application.
+The connected Supabase migration tool returned `McpServerError: Invalid or expired requestState` during this update. A subsequent read confirmed that the new tables and migration are absent. **This migration and the later API limiter migration are pending on the salon project; both passed on the disposable CI database.** Apply it before deploying the matching application.
 
-1. Take a database backup and check migration history. An environment at main `08485ca` needs only `supabase/migrations/20261014184518_communications_and_optional_deposits.sql`. Older environments need their intervening migrations, in order. Do not rerun applied migrations. The migration preserves old notification history, suppresses the unapproved legacy queue and replaces its sender; deploy the matching app immediately after migrating. Old deployed workers cannot claim the new queue.
+1. Take a database backup and check migration history. The existing salon project needs `supabase/migrations/20261014184518_communications_and_optional_deposits.sql` followed by `supabase/migrations/20261014193528_launch_safety_and_api_limits.sql`. Older environments need their intervening migrations, in order. Do not rerun applied migrations. The migration preserves old notification history, suppresses the unapproved legacy queue and replaces its sender; deploy the matching app immediately after migrating. Old deployed workers cannot claim the new queue.
 2. Deploy this commit with Node 24, the public Supabase URL/publishable key, server-only `SUPABASE_SECRET_KEY`, and a canonical HTTPS `NEXT_PUBLIC_SITE_URL`. Separate preview/test and production databases and provider credentials. No credentials belong in Git or database tables.
 3. Sign in with an authorized owner at `/admin/login`. Set actual salon phone, email and address under Salon & policies. Approve the remaining service prices/durations before customers can book them.
 4. Keep `.env.local` ignored. `.env.example` lists every variable. Resend, Twilio and Stripe keys must never use `NEXT_PUBLIC_`. Build success does not mean any provider or deployment is activated.
@@ -21,7 +21,7 @@ npx supabase db push --linked --dry-run --skip-vault
 npx supabase db push --linked --skip-vault
 ```
 
-Use the CLI's interactive authentication/database-password prompts; never put secrets in command arguments, chat or Git. The dry run should list only unapplied migrations. Stop and reconcile unexpected history instead of using `--include-all`, replaying seeds or resetting the live database. Verify the new migration in Supabase migration history and the presence of `communication_settings`, `booking_requests` and `payment_readiness` before deploying.
+Use the CLI's interactive authentication/database-password prompts; never put secrets in command arguments, chat or Git. The dry run should list only unapplied migrations. Stop and reconcile unexpected history instead of using `--include-all`, replaying seeds or resetting the live database. Verify the new migration in Supabase migration history and the presence of `communication_settings`, `booking_requests` and `payment_readiness` and `api_rate_limits` before deploying.
 
 ## Email setup (Resend)
 
@@ -47,7 +47,7 @@ Twilio message creation has no assumed idempotent POST guarantee. A timeout, amb
 
 Run `GET /api/cron/notifications` every five minutes with `Authorization: Bearer <CRON_SECRET>`; use a random secret of at least 32 characters. The worker expires abandoned checkout records and processes at most 10 jobs per channel per call. Database holds become unavailable/available based on their expiration timestamps even if cron is down. Reminder jobs more than 30 minutes overdue are suppressed. Alert on worker non-2xx responses, unknown/failed jobs and backlog; no uptime guarantee is provided by the app itself.
 
-For an approved **Vercel Pro** deployment, merge `deployment/vercel.pro.example.json` into root `vercel.json` and redeploy. Vercel supplies the bearer header from `CRON_SECRET`. There is intentionally no active root cron config: the hosting plan is not yet verified and nothing paid is provisioned. Another trusted HTTPS scheduler can call the same endpoint, with its own availability/costs. A sleeping Mac Mini is unsuitable for reliable production reminders.
+For an approved **Vercel Pro** deployment, merge `deployment/vercel.pro.example.json` into root `vercel.json` and redeploy. Vercel supplies the bearer header from `CRON_SECRET`. There is intentionally no active root cron schedule (`vercel.json` only disables main-branch auto-deployment): the hosting plan is not yet verified and nothing paid is provisioned. Another trusted HTTPS scheduler can call the same endpoint, with its own availability/costs. A sleeping Mac Mini is unsuitable for reliable production reminders.
 
 Pricing checked October 14, 2026; verify the linked provider pages before buying:
 
@@ -88,3 +88,5 @@ Cancellation releases the appointment but never silently issues a refund. The ow
 `npm test` uses fake transports and signed synthetic payloads. `npm run test:db` replays migrations and tests consent, disabled reminders, reminder replacements, claims/leases, immutable retries, deduplication, provider callbacks, capabilities, no-deposit booking, pending Checkout, invalid amounts, paid confirmation, duplicate/late/failed payments, refunds, expiry and tenant authorization. Tests roll back fixture data. PostgreSQL tests run against the disposable GitHub CI database because local PostgreSQL startup is blocked by the desktop sandbox.
 
 Still required before launch: actual provider credentials/domain verification, intended hosting plan and scheduler, owner messaging/payment approvals, published contact/policies, real signed-in owner acceptance, sandbox webhook/Checkout acceptance and operational alerts. No provider delivery, live charge, scheduler installation or hosting deployment is claimed merely because tests pass.
+
+The final launch audit adds an independent `PUBLIC_BOOKING_ENABLED=false` gate and shared database API limits. Configure `BOOKING_RATE_LIMIT_SECRET` and complete [the launch checklist](../LAUNCH_CHECKLIST.md) before enabling booking. See [OPERATIONS.md](../OPERATIONS.md) for preview isolation, production promotion, backups and recovery.

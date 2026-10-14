@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { adminClient } from "./supabase";
 export const adminContext = cache(async () => {
   const db = await adminClient();
-  if (!db) redirect("/admin/login?error=1");
+  if (!db) redirect("/admin/login");
   const { data, error } = await db
     .from("salons")
     .select("id,name,timezone")

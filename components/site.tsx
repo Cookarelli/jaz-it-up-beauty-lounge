@@ -1,3 +1,4 @@
+import { MobileNav } from "./mobile-nav";
 import Link from "next/link";
 import { ArrowUpRight, Scissors } from "lucide-react";
 export function Button({
@@ -37,17 +38,7 @@ export function Header() {
       <div className="desktop">
         <Button href="/book">Book your visit</Button>
       </div>
-      <details className="mobile">
-        <summary>Menu</summary>
-        <nav aria-label="Mobile">
-          {links.map(([label, url]) => (
-            <Link key={url} href={url}>
-              {label}
-            </Link>
-          ))}
-          <Link href="/book">Book your visit</Link>
-        </nav>
-      </details>
+      <MobileNav />
     </header>
   );
 }

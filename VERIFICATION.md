@@ -1,31 +1,35 @@
-# Dashboard verification
+# Final audit evidence — October 14, 2026
 
-Story: an authorized salon owner signs in, manages appointments/customers/hours/services/content through server actions, and receives validated, tenant-scoped Postgres changes with audit history.
+**Release decision: preview only.** See [LAUNCH_CHECKLIST.md](LAUNCH_CHECKLIST.md) and [OPERATIONS.md](OPERATIONS.md). No live customer messages, live charges, public booking activation or production deployment is claimed.
 
-- Base main: `5818f8e4fcc80f2597ffe4f65f6635767bbc4069`; existing IDs/history preserved.
-- New protected routes: Today, calendar, bookings/details/new, customers/details/new, hours/time off, settings/policies, reports and audit history.
-- Every private page and action verifies Supabase Auth and current staff membership. RLS independently scopes table operations to the salon. No service key enters a client component.
-- TypeScript, lint, 24 unit/validation tests and optimized Next.js build pass.
-- Database suites replay all migrations on disposable PostgreSQL 17 in GitHub CI. Local PostgreSQL startup is blocked by sandbox shared-memory permissions. Long live test transactions were rejected by the connector with `Invalid or expired requestState`; no live test success is claimed for this release.
-- Dashboard migrations (through the confirmed-schedule update below) are applied to the existing salon Supabase project. The later communications migration is pending as documented below; no new cloud resources were created.
-- UI uses associated labels, keyboard-accessible controls, live error/status messages, native confirmation dialogs, responsive columns and tablet/mobile calendar layouts.
-- Remaining acceptance: sign in with Delia’s provisioned account and verify owner screens against real salon configuration, configure provider email delivery, and exercise simultaneous reservations under load. No real customer data or test passwords are tracked.
+## Source and reproducibility
 
-## Confirmed schedule update
+The checkout was clean at the beginning of the audit. `git pull --ff-only origin main` confirmed baseline `b0f23dc631a139478a89efdea3d431dd012d2607`. Existing app/schema/history were preserved. Node 24 is pinned in `.nvmrc` and CI; the local checks used Node 22.23.2 within the supported engine range. A fresh `npm ci` installed 391 packages without modifying the lockfile.
 
-- Added forward-only migration `20261014182155_delia_confirmed_schedule.sql`, applied to the salon project.
-- Tuesday–Friday 09:00–19:00 and Saturday 09:00–15:00, America/Chicago; Sunday/Monday closed. No lunch/break blocks inserted and no appointments, buffers or manual blocks rewritten.
-- Availability intersects working/business/special hours before checking the full buffered interval. Exact gap boundaries allow adjacent services outside the regular start grid.
-- Added SQL scheduling regression coverage and a 24th TypeScript test for local opening times around spring/autumn DST. Catalog tests now use an isolated salon rather than depending on the owner’s working week.
-- Local lint, typecheck, all 24 unit tests and production build pass. Live read-only checks confirm the five configured days, lunchtime availability and unchanged appointment/manual-block counts.
+## Passed checks
 
-## Communications and optional deposits
+- Local ESLint, TypeScript, all **40 unit tests**, optimized Next.js production build and `git diff --check` passed after the audit changes.
+- Production-only dependency audit: **zero vulnerabilities**. Full audit: five high advisory entries from the development lint-tooling braces dependency chain, with no patched compatible braces release available. Upstream ESLint peer-range warnings remain; the lint command itself passes. These are documented residual risks, not silently suppressed.
+- [GitHub Quality run 38625735196](https://github.com/Cookarelli/jaz-it-up-beauty-lounge/actions/runs/38625735196) passed at `2331519d11be0f56ae64fcbada156f273aa60c76`, the audit backend changes. Both the app check and disposable PostgreSQL 17 jobs succeeded.
+- All **five SQL suites** passed after replaying every migration: catalog, management, scheduling, communications/payments and launch safety. They assert owner/manager versus outsider/stylist access, guest read restrictions, no direct guest writes, validation, optimistic revisions, manual booking, reschedule/cancel/complete/no-show, service approvals, closures/hours, notification/payment states and audit history.
+- **Seven independent-connection concurrency scenarios** passed: 12 simultaneous same-slot bookings leave one winner; 8 duplicate requests yield one appointment; overlapping buffers reject one contender; hold versus booking and block versus booking serialize safely; two workers claim notifications once; 20 concurrent booking-limit requests permit five.
+- Timezone tests cover Chicago local dates near UTC midnight, 23/25-hour days, skipped/repeated times, both DST transitions, uninterrupted lunch, adjacent appointments and whole-duration/buffer closing limits.
+- Local production-server HTTP checks: all public routes and login returned 200; booking remained closed; missing origin returned 403; disabled booking/availability returned 503; unsigned cron returned 401; unconfigured provider webhooks returned 503; API no-store, nosniff/frame-denial headers, robots disallow-all and empty sitemap were verified.
+- Mobile browser at 390px: catalog-to-book flow reaches the closed-booking message; content fits without horizontal overflow. Fixed the menu remaining open after route navigation; verified closure and Escape returning focus to the summary. Login fields have associated labels and correct autocomplete. Fixed normal unsigned redirects incorrectly displaying a failed-login message.
+- Git-history scan found no private keys, Stripe/Supabase secret patterns or service-role JWTs in 228 inspected blobs before the final documentation commit. Scanner output reports its limitations; this is not a guarantee covering every credential format.
 
-Story: guest booking creates either a confirmed no-deposit appointment or a bounded Checkout hold; signed Stripe events confirm paid bookings atomically. Appointment changes create private, consent-aware delivery jobs, and scheduled provider adapters persist acceptance/delivery/retry history. Owner controls and logs remain protected by Auth and tenant RLS.
+## Read-only live Supabase verification
 
-- All delivery and payment switches default off. Tests use synthetic records and fake transports; no real messages or cards.
-- Added 11 provider/configuration/template/capability/payment tests (35 total unit tests), plus a transactional database workflow suite.
-- Local lint, TypeScript, unit tests and production build pass. Production dependency audit reports zero vulnerabilities. Provider credentials, deployed scheduler and live/sandbox provider acceptance are not claimed.
-- GitHub CI passed a clean PostgreSQL migration replay and all four SQL suites on the initial implementation. The live migration tool returned `Invalid or expired requestState`; read-back confirmed no partial application (both new tables absent, original appointment count unchanged). The new migration remains a documented deployment prerequisite.
+Project `fwxothhjxtvuupyeqsri`, Jaz It Up, America/Chicago: nine applied migrations through `20261014182155`; 21 public tables all have RLS enabled; zero appointments at audit time; one owner membership. No test customers or appointments were inserted into this live project.
 
-- Production-server smoke checks passed: public catalog/booking/preferences/status pages render, unsigned admin requests redirect to login, cron rejects unsigned requests, unconfigured webhooks return 503, and booking status/cancellation reject missing capabilities/origin. These checks sent no provider messages or payments.
+All 23 services and 15 variants were compared against the supplied owner catalog snapshot, including pricing, timing, length, approval flags and chemical bundles: **zero differences**. Unknown/provisional values remain visible but not instantly bookable. Confirmed Tue–Fri 09:00–19:00 / Sat 09:00–15:00 hours remain editable, with no automatic lunch/breaks.
+
+The communications migration `20261014184518` is still absent after an earlier connector failure (`Invalid or expired requestState`). The new limiter migration `20261014193528` is also pending. Their success in CI is not live migration success. Public contact/address fields are blank. Supabase's advisor reports leaked-password protection disabled; intentionally service-only RLS tables without policies are informational, not an instruction to open access.
+
+## Deployment and acceptance limits
+
+Browser inspection confirmed Vercel project `jaz-it-up-beauty-lounge`, team `steves-projects-e37a4ef4`, linked to the correct repository, on Hobby with Next.js/Node 24 and repository-root builds. The connector still returns a team-scoped 403; the authenticated browser provides inspection access. Supabase credentials are scoped to Production only. Preview lacks an isolated database; site URL and limiter secret are not configured. Main-branch automatic deployment is disabled by committed `vercel.json` to preserve the requested preview-only release boundary.
+
+A real hosted reservation, signed-in owner browser workflow, provider delivery, Stripe sandbox Checkout, external scheduler, final domain/TLS and backup restoration have **not** passed acceptance. No credentials or production fixture bypass were introduced to manufacture a pass. The local PostgreSQL server cannot start under the macOS shared-memory sandbox; the real database suites therefore ran in CI. Accessibility checks are foundations, not a full WCAG/screen-reader certification.
+
+Deployment evidence will be appended only after a preview reaches a verified state. The operator must complete the protected preview acceptance script in OPERATIONS before public launch.

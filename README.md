@@ -1,6 +1,6 @@
 # Jaz It Up Beauty Lounge
 
-Next.js App Router, TypeScript, Tailwind, Supabase Auth/Postgres, and Vercel-ready deployment. Public customers do not need accounts. Payments remain disabled by a database constraint.
+Next.js App Router, TypeScript, Tailwind, Supabase Auth/Postgres, and Vercel-ready deployment. Public customers do not need accounts. Public booking, messaging, indexing and optional payments default off. Start with [LAUNCH_CHECKLIST.md](LAUNCH_CHECKLIST.md) and [OPERATIONS.md](OPERATIONS.md) for the current release decision and setup/recovery procedures.
 
 ## Local development / Mac Mini
 
@@ -12,7 +12,7 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Open http://localhost:3000. Local development needs the Mac awake; Vercel hosting does not. Fill the project URL and publishable key in `.env.local`. Guest reservation APIs additionally require the server-only `SUPABASE_SECRET_KEY`. Never prefix that key with NEXT_PUBLIC or commit environment files. Without a configured backend the public menu uses the owner-supplied seed snapshot and booking fails closed.
+Open http://localhost:3000. Local development needs the Mac awake; Vercel hosting does not. Fill the project URL and publishable key in `.env.local`. Guest reservation APIs additionally require the server-only `SUPABASE_SECRET_KEY`, a random 32+ character `BOOKING_RATE_LIMIT_SECRET`, and explicit `PUBLIC_BOOKING_ENABLED=true` after acceptance. Never prefix that key with NEXT_PUBLIC or commit environment files. Without a configured backend the public menu uses the owner-supplied seed snapshot and booking fails closed.
 
 ```sh
 npm run lint
@@ -96,7 +96,7 @@ Delia can edit her schedule and manually block any time in **Admin → Hours & t
 
 ## Automated database tests
 
-`supabase/tests/catalog.sql`, `supabase/tests/management.sql`, `supabase/tests/scheduling.sql` and `supabase/tests/communications_payments.sql` are transactional assertion suites covering public/private RLS, writes, private notes, owner edits, optimistic concurrency, approval gates, variant routing, holds, buffers, cancellations, hours, exceptions, snapshots, notifications, auditing, consent, retry safety, disabled-payment gates and signed-event payment state transitions. Synthetic tenants, identities and bookings are rolled back. Management tests include owner/outsider/stylist authorization, direct-table privacy, manual bookings, duplicate-submit protection, reschedules, stale changes, cancellation, no-show, completion, blocks/closures, recurring hours, public content, notification generations, reporting and audit history.
+`supabase/tests/catalog.sql`, `supabase/tests/management.sql`, `supabase/tests/scheduling.sql` and `supabase/tests/communications_payments.sql` and `supabase/tests/launch_safety.sql` are transactional assertion suites covering public/private RLS, writes, private notes, owner edits, optimistic concurrency, approval gates, variant routing, holds, buffers, cancellations, hours, exceptions, snapshots, notifications, auditing, consent, retry safety, disabled-payment gates and signed-event payment state transitions. Synthetic tenants, identities and bookings are rolled back. Management tests include owner/outsider/stylist authorization, direct-table privacy, manual bookings, duplicate-submit protection, reschedules, stale changes, cancellation, no-show, completion, blocks/closures, recurring hours, public content, notification generations, reporting and audit history.
 
 ```sh
 TEST_DATABASE_URL=postgres://postgres:postgres@localhost:5432/salon_test npm run test:db
@@ -106,9 +106,9 @@ Use a disposable database. On an empty PostgreSQL 17 test database, the runner i
 
 ## Notifications and deployment
 
-The communications/deposit update replaces the generic webhook sender with Resend transactional email and an optional Twilio SMS adapter. All channels, reminders and payments default off. The old queue is retained as suppressed history. See **[exact integration setup, scheduling costs, payment/refund rules and deployment checklist](docs/COMMUNICATIONS_PAYMENTS.md)** before activating anything. The new migration is `20261014184518_communications_and_optional_deposits.sql`; apply it once after the confirmed-schedule migration and deploy the matching app.
+The communications/deposit update replaces the generic webhook sender with Resend transactional email and an optional Twilio SMS adapter. All channels, reminders and payments default off. The old queue is retained as suppressed history. See **[exact integration setup, scheduling costs, payment/refund rules and deployment checklist](docs/COMMUNICATIONS_PAYMENTS.md)** before activating anything. The pending migrations are `20261014184518_communications_and_optional_deposits.sql` followed by `20261014193528_launch_safety_and_api_limits.sql`; apply both once after the confirmed-schedule migration and deploy the matching app.
 
-For Vercel, import the repository, select Next.js/Node 24, set environment variables and the canonical HTTPS NEXT_PUBLIC_SITE_URL, then deploy. Keep preview/production databases separate. Configure Auth site URL/redirects, notification scheduling and rate limiting/bot protection. Confirm address, phone, actual policies, remaining service approvals, and privacy retention before launch. Delia’s operating hours are already confirmed and configured. No hosting deployment is claimed by this repository update. Optional deposit processing stays disabled until verified Stripe setup and owner approval. There is no customer account requirement; confirmed appointment cancellation remains salon-managed.
+For Vercel, import the repository, select Next.js/Node 24, set environment variables and the canonical HTTPS NEXT_PUBLIC_SITE_URL, then deploy. Keep preview/production databases separate. Configure Auth site URL/redirects, notification scheduling and rate limiting/bot protection. Confirm address, phone, actual policies, remaining service approvals, and privacy retention before launch. Delia’s operating hours are already confirmed and configured. See VERIFICATION.md for the actual deployment evidence; never infer hosting success from a commit. `vercel.json` disables automatic deployments from `main` until launch approval; branch previews remain enabled. Optional deposit processing stays disabled until verified Stripe setup and owner approval. There is no customer account requirement; confirmed appointment cancellation remains salon-managed. The separate concurrency runner commits synthetic fixtures in a disposable database; run `npm run test:concurrency` after `test:db`, then discard that database.
 
 ## Dependencies
 
