@@ -79,3 +79,8 @@ export function logServerFailure(event: string, code?: unknown) {
   );
   return reference;
 }
+
+/** Bind guest writes to the configured website, never a caller-controlled Host header. */
+export function isBookingOrigin(req: Request, siteUrl: string) {
+  return req.headers.get("origin") === new URL(siteUrl).origin;
+}

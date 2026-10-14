@@ -211,9 +211,10 @@ export function BookingForm({
               <span>
                 {option.duration_minutes} minutes · {formatPrice(option)}
               </span>
-              {option.length_qualification && (
-                <span>{option.length_qualification}</span>
-              )}
+              {option.length_qualification &&
+                option.length_qualification !== "any" && (
+                  <span>{option.length_qualification}</span>
+                )}
               {option.includes_cut_style && (
                 <span>Haircut and style included.</span>
               )}

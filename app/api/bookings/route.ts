@@ -1,6 +1,8 @@
+import { env } from "@/lib/env";
 import { apiGuard } from "@/lib/api-guard";
 import {
   boundedJson,
+  isBookingOrigin,
   RequestProblem,
   logServerFailure,
 } from "@/lib/http-safety";
@@ -12,7 +14,7 @@ import { hashToken } from "@/lib/capabilities";
 import { createCheckout, credentialFingerprint } from "@/lib/payments/stripe";
 import type { BookingRequest } from "@/lib/payments/core";
 export async function POST(req: Request) {
-  if (req.headers.get("origin") !== new URL(req.url).origin)
+  if (!isBookingOrigin(req, env.NEXT_PUBLIC_SITE_URL))
     return Response.json({ error: "Invalid request origin." }, { status: 403 });
   const blocked = await apiGuard(req, "bookings", true);
   if (blocked) return blocked;

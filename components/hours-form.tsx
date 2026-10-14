@@ -28,6 +28,7 @@ export function HoursForm({
   return (
     <AdminForm
       action={action}
+      preserveValues
       label={kind === "working" ? "Save working day" : "Save business day"}
       confirm="Update this recurring day? Existing appointments keep their times. Review the calendar before shortening hours."
     >

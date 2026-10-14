@@ -110,6 +110,11 @@ test("guest booking → saved receipt → owner reschedule/cancel; retries and c
   expect(
     Date.parse(saved.data!.ends_at) - Date.parse(saved.data!.starts_at),
   ).toBe(15 * 60_000);
+  const forged = await request.post("/api/bookings", {
+    headers: { origin: "http://localhost:3100" },
+    data: submitted,
+  });
+  expect(forged.status()).toBe(403);
   const retry = await request.post("/api/bookings", {
     headers: { origin },
     data: submitted,
@@ -288,6 +293,15 @@ test("owner calendar and hours forms work; manual time off removes slots", async
         ).data?.closes_at,
     )
     .toBe("14:30:00");
+  await expect(
+    business.getByRole("button", { name: "Save business day" }),
+  ).toBeEnabled();
+  await expect(
+    business.getByRole("combobox", { name: /^Day of week/ }),
+  ).toHaveValue("6");
+  await expect(business.getByLabel("Closes", { exact: true })).toHaveValue(
+    "14:30",
+  );
   await business.getByLabel("Closes", { exact: true }).fill("15:00");
   await business.getByRole("button", { name: "Save business day" }).click();
   await expect

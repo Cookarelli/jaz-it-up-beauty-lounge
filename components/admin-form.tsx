@@ -7,12 +7,14 @@ export function AdminForm({
   children,
   label = "Save changes",
   confirm,
+  preserveValues = false,
   className = "admin-form",
 }: {
   action: (state: AdminState, form: FormData) => Promise<AdminState>;
   children: React.ReactNode;
   label?: string;
   confirm?: string;
+  preserveValues?: boolean;
   className?: string;
 }) {
   const [state, formAction, pending] = useActionState(action, { message: "" });
@@ -22,6 +24,11 @@ export function AdminForm({
       action={formAction}
       className={className}
       aria-describedby={state.message ? id : undefined}
+      onReset={(e) => {
+        // React actions reset native form controls after success. Hours editors
+        // must retain the selected weekday/stylist for subsequent edits.
+        if (preserveValues) e.preventDefault();
+      }}
       onSubmit={(e) => {
         if (confirm && !window.confirm(confirm)) e.preventDefault();
       }}

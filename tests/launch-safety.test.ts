@@ -104,3 +104,40 @@ test("booking minimum date follows Chicago near UTC midnight", () => {
   assert.equal(localDate("2026-10-15T00:30:00Z"), "2026-10-14");
   assert.equal(localDate("2026-11-02T05:30:00Z"), "2026-11-01");
 });
+
+test("booking origin uses the configured site when Next normalizes the internal host", async () => {
+  const { isBookingOrigin } = await import("../lib/http-safety");
+  const req = new Request("http://localhost:3100/api/bookings", {
+    headers: { origin: "http://127.0.0.1:3100" },
+  });
+  assert.equal(isBookingOrigin(req, "http://127.0.0.1:3100"), true);
+  assert.equal(
+    isBookingOrigin(
+      new Request("https://internal.example/api/bookings", {
+        headers: { origin: "https://salon.example" },
+      }),
+      "https://salon.example",
+    ),
+    true,
+  );
+});
+test("booking origin rejects missing, foreign, downgraded and forged host origins", async () => {
+  const { isBookingOrigin } = await import("../lib/http-safety");
+  for (const origin of [
+    "",
+    "null",
+    "https://attacker.example",
+    "http://salon.example",
+    "https://salon.example:444",
+    "https://salon.example.attacker.example",
+  ]) {
+    const req = new Request("https://attacker.example/api/bookings", {
+      headers: {
+        origin,
+        host: "attacker.example",
+        "x-forwarded-host": "salon.example",
+      },
+    });
+    assert.equal(isBookingOrigin(req, "https://salon.example"), false);
+  }
+});
