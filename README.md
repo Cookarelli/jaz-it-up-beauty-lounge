@@ -24,11 +24,11 @@ npm start
 
 ## Migrations and seed
 
-The configured Supabase project is `fwxothhjxtvuupyeqsri`, named Jaz It Up, in OptAImal LLC. The tracked migrations through the owner management dashboard and management reports have been applied there. **Do not rerun the historical bootstrap or execute applied migrations again.** `supabase/migrations` is the canonical schema history.
+The configured Supabase project is `fwxothhjxtvuupyeqsri`, named Jaz It Up, in OptAImal LLC. All tracked migrations through `20261014182155_delia_confirmed_schedule.sql` have been applied there. **Do not rerun the historical bootstrap or execute applied migrations again.** `supabase/migrations` is the canonical schema history.
 
 For another empty Supabase project, apply every migration in filename order through Supabase migration tooling. For an existing project at commit `5818f8e`, apply only `20261014172112_owner_management_dashboard.sql` and `20261014175238_management_reports_and_notification_generations.sql`, after checking migration history and taking a backup. They expand the schema, preserve existing location/stylist and appointment IDs, backfill customer links and booking snapshots, and never delete client records. The new migrations add owner workflows, recurring hours, time off, public content settings, reporting, revision checks and notification generations. They preserve customer records and historical appointments.
 
-`20261014170150_seed_owner_service_menu.sql` installs the owner-supplied board. `supabase/seed.sql` provides the same idempotent seed for development. Natural-key conflict handling never overwrites Delia’s later edits. No customers, Auth users, appointments, business hours, phone numbers or real client data are seeded. Buffers default to zero as an explicit configurable scheduling default, not an assertion about salon preparation time.
+`20261014170150_seed_owner_service_menu.sql` installs the owner-supplied board. `supabase/seed.sql` provides the same idempotent seed for development. Natural-key conflict handling never overwrites Delia’s later edits. No customers, Auth users, appointments, phone numbers or real client data are seeded. The separate confirmed-schedule migration installs Delia’s explicitly supplied working and business hours. Buffers default to zero as an explicit configurable scheduling default, not an assertion about salon preparation time.
 
 The seed has **23 services and 15 variants** across CUTS, WAXING, COLOR, PERMS and EXTRAS. Men’s/women’s adult haircut variants retain the $20–$30 board range with their supplied 30/60-minute durations; Delia must set individual prices. TBD or provisional durations stay unapproved. Perm variants cover above-shoulder, shoulder, and below-shoulder lengths with the supplied approximate 90–120-minute range; no exact time or length surcharge is invented. Brazilian blowout variants use the supplied $150/$200 prices and 120 minutes. Pins/braids remains unapproved because “up to 60 minutes” is not a confirmed exact duration. All color, perm and Brazilian chemical bundles include haircut/style once.
 
@@ -76,9 +76,27 @@ The legacy `salon_admins` table is retained for compatibility with old installat
 - **Reports:** aggregate full date ranges inside Postgres, showing appointment volume and estimated value by status. Collected revenue is explicitly untracked. Cancelled/no-show values are excluded from the headline confirmed/completed estimate.
 - **Change history:** append-only actor/entity/revision records and safe before/after scheduling values. Contacts and private notes are not copied into audit payloads.
 
+## Delia’s confirmed schedule
+
+`20261014182155_delia_confirmed_schedule.sql` sets **America/Chicago** on the salon and Delia’s location, then installs the same week in both business hours and her recurring working hours:
+
+| Day | Local hours |
+| --- | --- |
+| Sunday–Monday | Closed |
+| Tuesday–Friday | 9:00 AM–7:00 PM |
+| Saturday | 9:00 AM–3:00 PM |
+
+There is no scheduled lunch and no automatic break between appointments. Only each service/variant’s configured preparation and cleanup buffers reserve additional time. The full occupied interval must fit inside the intersection of working hours, business hours and any special-hours restriction. Existing manual blocks, closures and appointments remain intact.
+
+The owner’s start-time spacing remains configurable. In addition to that grid, the engine offers exact starts immediately before/after occupied intervals and the latest fitting start before closing. A 15-minute appointment can therefore be followed immediately by another even when the regular start grid is 30 minutes. Configured buffers still apply; half-open occupied intervals permit exact adjacency and reject overlaps.
+
+Delia can edit her schedule and manually block any time in **Admin → Hours & time off**. Changes affect future availability without moving or cancelling existing bookings. The migration runs once; the app and service seed never reset later owner edits. Other environments at commit `f488d6a` need only this pending migration. If a different installation already has Sunday/Monday hours, the migration stops for reconciliation in the dashboard instead of erasing them.
+
+`scheduling.sql` exercises the installed week, uninterrupted lunch, full-duration/buffer closing limits, variant timing, short back-to-back services, holds/conflicts, manual blocks, owner edits and appointment preservation. Future fixtures straddle both Chicago DST transitions; local opening stays at 9 AM while UTC changes between 14:00 and 15:00.
+
 ## Automated database tests
 
-`supabase/tests/catalog.sql` and `supabase/tests/management.sql` are transactional assertion suites covering public/private RLS, writes, private notes, owner edits, optimistic concurrency, approval gates, variant routing, holds, buffers, cancellations, hours, exceptions, snapshots, notifications, auditing and disabled payments. Synthetic tenants, identities and bookings are rolled back. Management tests include owner/outsider/stylist authorization, direct-table privacy, manual bookings, duplicate-submit protection, reschedules, stale changes, cancellation, no-show, completion, blocks/closures, recurring hours, public content, notification generations, reporting and audit history.
+`supabase/tests/catalog.sql`, `supabase/tests/management.sql`, and `supabase/tests/scheduling.sql` are transactional assertion suites covering public/private RLS, writes, private notes, owner edits, optimistic concurrency, approval gates, variant routing, holds, buffers, cancellations, hours, exceptions, snapshots, notifications, auditing and disabled payments. Synthetic tenants, identities and bookings are rolled back. Management tests include owner/outsider/stylist authorization, direct-table privacy, manual bookings, duplicate-submit protection, reschedules, stale changes, cancellation, no-show, completion, blocks/closures, recurring hours, public content, notification generations, reporting and audit history.
 
 ```sh
 TEST_DATABASE_URL=postgres://postgres:postgres@localhost:5432/salon_test npm run test:db
@@ -90,7 +108,7 @@ Use a disposable database. On an empty PostgreSQL 17 test database, the runner i
 
 `NotificationAdapter` is the provider boundary. Configure `NOTIFICATION_WEBHOOK_URL`, `NOTIFICATION_WEBHOOK_TOKEN`, and a random `CRON_SECRET` of at least 32 characters. The receiver must deduplicate by the Idempotency-Key (`job UUID:generation`) and deliver transactional messages. Call `/api/cron/notifications` using `Authorization: Bearer <CRON_SECRET>` from a trusted scheduler. Jobs use five-minute leases and at most ten attempts; cancelled appointments are skipped. Reschedules revise payloads/due times and increment generation so an old confirmation cannot deduplicate a new one. Workers check current status/generation before sending and acknowledge only the claimed generation. A message already accepted by a provider cannot be recalled by a later cancellation. Events record attempted/delivered/failed outcomes. Delivery is at least once. No messaging provider is provisioned automatically.
 
-For Vercel, import the repository, select Next.js/Node 24, set environment variables and the canonical HTTPS NEXT_PUBLIC_SITE_URL, then deploy. Keep preview/production databases separate. Configure Auth site URL/redirects, notification scheduling and rate limiting/bot protection. Confirm address, phone, hours, actual policies, service approvals, and privacy retention before launch. No hosting deployment is claimed by this repository update. There is no payment processing, customer account requirement, or customer self-service cancellation link.
+For Vercel, import the repository, select Next.js/Node 24, set environment variables and the canonical HTTPS NEXT_PUBLIC_SITE_URL, then deploy. Keep preview/production databases separate. Configure Auth site URL/redirects, notification scheduling and rate limiting/bot protection. Confirm address, phone, actual policies, remaining service approvals, and privacy retention before launch. Delia’s operating hours are already confirmed and configured. No hosting deployment is claimed by this repository update. There is no payment processing, customer account requirement, or customer self-service cancellation link.
 
 ## Dependencies
 

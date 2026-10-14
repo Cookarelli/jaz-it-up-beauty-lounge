@@ -96,6 +96,12 @@ export default async function Hours() {
         take precedence. Existing appointments keep their booked times when
         recurring hours change.
       </p>
+      <p className="notice">
+        Booking runs continuously through the working day. No lunch or extra
+        breaks are added automatically. Only service preparation and cleanup
+        buffers reserve extra time. Use Block time off whenever you need a
+        break.
+      </p>
       <div className="admin-columns">
         <article className="card">
           <h3>Recurring stylist hours</h3>

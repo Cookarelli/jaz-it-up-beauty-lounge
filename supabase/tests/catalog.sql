@@ -1,7 +1,12 @@
 begin;
 -- All synthetic identities, bookings and edits are rolled back at the end.
 do $$ declare service uuid; variant uuid; stylist uuid; salon uuid; booking uuid; held uuid; starts timestamptz; tz text; item public.services; caught boolean; begin
- select s.id,l.salon_id into stylist,salon from public.stylists s join public.locations l on l.id=s.location_id where s.active limit 1;
+ -- Isolated tenant: catalog tests must not depend on Delia's real working week.
+ insert into public.salons(name) values('Catalog test salon') returning id into salon;
+ insert into public.locations(id,salon_id,name) values(salon,salon,'Catalog fixture location');
+ insert into public.stylists(location_id,name) values(salon,'Catalog fixture stylist') returning id into stylist;
+ insert into public.staff(salon_id,stylist_id,name) values(salon,stylist,'Catalog fixture stylist');
+ insert into public.booking_policies(salon_id) values(salon);
  select timezone into tz from public.salons where id=salon;
  starts=((current_date+14)::text||' 10:00:00')::timestamp at time zone tz;
  insert into public.services(salon_id,slug,name,description,category,pricing_type,price_cents,duration_minutes,price_approved,duration_approved,status,preparation_minutes,cleanup_minutes) values(salon,'verification-'||gen_random_uuid(),'Verification only','','EXTRAS','exact',1000,30,true,true,'published',15,15) returning id into service;

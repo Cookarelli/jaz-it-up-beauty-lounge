@@ -161,3 +161,15 @@ test("future deposit rules cannot imply a charged payment", () => {
     false,
   );
 });
+
+test("Chicago 9 AM stays local across both DST transition weekends", () => {
+  for (const [day, utc] of [
+    ["2027-03-13", "2027-03-13T15:00:00.000Z"],
+    ["2027-03-16", "2027-03-16T14:00:00.000Z"],
+    ["2026-10-31", "2026-10-31T14:00:00.000Z"],
+    ["2026-11-03", "2026-11-03T15:00:00.000Z"],
+  ]) {
+    assert.equal(localToISO(`${day}T09:00`, "America/Chicago"), utc);
+    assert.equal(localInput(utc, "America/Chicago"), `${day}T09:00`);
+  }
+});
