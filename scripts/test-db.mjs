@@ -1,10 +1,7 @@
 import pg from "pg";
 import { readFile, readdir } from "node:fs/promises";
-const url = process.env.TEST_DATABASE_URL;
-if (!url)
-  throw Error(
-    "Set TEST_DATABASE_URL to a disposable PostgreSQL test database. No production credentials are needed.",
-  );
+import { testDatabaseUrl } from "./test-database-url.mjs";
+const url = testDatabaseUrl();
 const db = new pg.Client({ connectionString: url });
 await db.connect();
 try {

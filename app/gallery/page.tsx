@@ -1,5 +1,8 @@
 import { Intro, Placeholder } from "@/components/site";
-export const metadata = { title: "Gallery" };
+export const metadata = {
+  alternates: { canonical: "/gallery" },
+  title: "Gallery",
+};
 export default function Gallery() {
   return (
     <section>

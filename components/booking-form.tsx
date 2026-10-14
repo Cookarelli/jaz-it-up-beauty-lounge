@@ -1,5 +1,6 @@
 "use client";
 import { useRef, useState } from "react";
+import { localDate } from "@/lib/admin-time";
 import { formatPrice, type BookingOption } from "@/lib/service-types";
 export function BookingForm({
   services,
@@ -177,7 +178,7 @@ export function BookingForm({
               type="date"
               required
               value={date}
-              min={new Date().toISOString().slice(0, 10)}
+              min={localDate()}
               onChange={(e) => {
                 setDate(e.target.value);
                 setSlots([]);

@@ -1,3 +1,4 @@
+import { logServerFailure } from "@/lib/http-safety";
 import { Webhook } from "svix";
 import { integrations } from "@/lib/integrations";
 import { privilegedClient } from "@/lib/supabase";
@@ -39,6 +40,7 @@ export async function POST(req: Request) {
     if (r.error || !r.data) throw Error();
     return Response.json({ received: true });
   } catch {
+    logServerFailure("resend_webhook_processing_failure");
     return new Response(null, { status: 503 });
   }
 }

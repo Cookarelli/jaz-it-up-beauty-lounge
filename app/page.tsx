@@ -1,3 +1,4 @@
+export const metadata = { alternates: { canonical: "/" } };
 import { Button, Placeholder } from "@/components/site";
 import { ArrowUpRight, Sparkles, Heart, Scissors } from "lucide-react";
 import { publicProfile } from "@/lib/salon-profile";

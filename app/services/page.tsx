@@ -7,7 +7,10 @@ import {
   bookable,
   type Service,
 } from "@/lib/service-types";
-export const metadata = { title: "Services" };
+export const metadata = {
+  alternates: { canonical: "/services" },
+  title: "Services",
+};
 function Offering({
   s,
   parentId,

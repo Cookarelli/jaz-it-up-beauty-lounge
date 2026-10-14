@@ -727,3 +727,8 @@ details.card > summary {
     padding: 28px 5%;
   }
 }
+
+/* Keep focus, touch targets and long booking references usable on narrow screens. */
+.mobile summary { min-height: 44px; display: flex; align-items: center; }
+.card, .notice, p[role="status"] { overflow-wrap: anywhere; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; } }

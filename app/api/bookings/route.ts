@@ -1,3 +1,9 @@
+import { apiGuard } from "@/lib/api-guard";
+import {
+  boundedJson,
+  RequestProblem,
+  logServerFailure,
+} from "@/lib/http-safety";
 import { privilegedClient } from "@/lib/supabase";
 import { bookingSchema } from "@/lib/validation";
 import { integrations } from "@/lib/integrations";
@@ -8,14 +14,16 @@ import type { BookingRequest } from "@/lib/payments/core";
 export async function POST(req: Request) {
   if (req.headers.get("origin") !== new URL(req.url).origin)
     return Response.json({ error: "Invalid request origin." }, { status: 403 });
-  const text = await req.text();
-  if (text.length > 8000)
-    return Response.json({ error: "Request too large." }, { status: 413 });
+  const blocked = await apiGuard(req, "bookings", true);
+  if (blocked) return blocked;
   let raw;
   try {
-    raw = JSON.parse(text);
-  } catch {
-    return Response.json({ error: "Invalid request." }, { status: 400 });
+    raw = await boundedJson(req);
+  } catch (e) {
+    return Response.json(
+      { error: e instanceof RequestProblem ? e.message : "Invalid request." },
+      { status: e instanceof RequestProblem ? e.status : 400 },
+    );
   }
   const parsed = bookingSchema.safeParse(raw);
   if (!parsed.success)
@@ -44,7 +52,9 @@ export async function POST(req: Request) {
         : null,
       p_livemode: integrations.STRIPE_MODE === "live",
     });
-    if (error)
+    if (error) {
+      if (error.code !== "P0001" && error.code !== "23P01")
+        logServerFailure("booking_database_failure", error.code);
       return Response.json(
         {
           error:
@@ -52,6 +62,7 @@ export async function POST(req: Request) {
         },
         { status: 409 },
       );
+    }
     const r = (Array.isArray(data) ? data[0] : data) as BookingRequest;
     if (!r?.id) throw Error("Invalid booking response");
     if (r.status === "confirmed")
@@ -94,8 +105,10 @@ export async function POST(req: Request) {
       policy: r.policy_snapshot,
     });
   } catch {
+    const reference = logServerFailure("booking_processing_failure");
     return Response.json(
       {
+        reference,
         error:
           "Booking is temporarily unavailable. Retry this same submission to safely recover it. Unfinished checkout holds expire automatically.",
       },

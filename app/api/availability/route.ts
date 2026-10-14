@@ -1,6 +1,10 @@
+import { apiGuard } from "@/lib/api-guard";
+import { logServerFailure } from "@/lib/http-safety";
 import { privilegedClient } from "@/lib/supabase";
 import { z } from "zod";
 export async function GET(req: Request) {
+  const blocked = await apiGuard(req, "availability", true);
+  if (blocked) return blocked;
   const url = new URL(req.url);
   const parsed = z
     .object({
@@ -26,8 +30,9 @@ export async function GET(req: Request) {
       { headers: { "Cache-Control": "no-store" } },
     );
   } catch {
+    const reference = logServerFailure("availability_failure");
     return Response.json(
-      { error: "Availability is temporarily unavailable." },
+      { error: "Availability is temporarily unavailable.", reference },
       { status: 503 },
     );
   }

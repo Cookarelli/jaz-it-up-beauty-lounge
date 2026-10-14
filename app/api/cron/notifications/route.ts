@@ -1,3 +1,4 @@
+import { logServerFailure } from "@/lib/http-safety";
 import { env } from "@/lib/env";
 import { secureEqual } from "@/lib/capabilities";
 import { privilegedClient } from "@/lib/supabase";
@@ -20,6 +21,7 @@ export async function GET(req: Request) {
       headers: { "Cache-Control": "no-store" },
     });
   } catch {
+    logServerFailure("scheduled_processing_failure");
     return Response.json(
       {
         error:

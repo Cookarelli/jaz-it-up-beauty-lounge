@@ -1,8 +1,11 @@
+import { apiGuard } from "@/lib/api-guard";
 import { accessBooking } from "@/lib/booking-access";
 import { stripeClient } from "@/lib/payments/stripe";
 export async function POST(req: Request) {
   if (req.headers.get("origin") !== new URL(req.url).origin)
     return new Response(null, { status: 403 });
+  const blocked = await apiGuard(req, "cancel");
+  if (blocked) return blocked;
   try {
     const { data, db } = await accessBooking(req);
     if (data.status !== "pending" || !data.stripe_session_id)

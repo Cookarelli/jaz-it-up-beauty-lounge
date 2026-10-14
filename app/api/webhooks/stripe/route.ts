@@ -1,3 +1,4 @@
+import { logServerFailure } from "@/lib/http-safety";
 import Stripe from "stripe";
 import { verifyStripeEvent } from "@/lib/payments/webhook";
 import { integrations } from "@/lib/integrations";
@@ -82,6 +83,7 @@ export async function POST(req: Request) {
     }
     return Response.json({ received: true });
   } catch {
+    logServerFailure("stripe_webhook_processing_failure");
     return Response.json(
       { error: "Event not processed; retry required" },
       { status: 503 },

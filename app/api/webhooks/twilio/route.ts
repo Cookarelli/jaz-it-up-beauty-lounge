@@ -1,3 +1,4 @@
+import { logServerFailure } from "@/lib/http-safety";
 import { integrations } from "@/lib/integrations";
 import { env } from "@/lib/env";
 import { verifyTwilio } from "@/lib/communications/adapters";
@@ -53,6 +54,7 @@ export async function POST(req: Request) {
       headers: { "Content-Type": "text/xml" },
     });
   } catch {
+    logServerFailure("twilio_webhook_processing_failure");
     return new Response(null, { status: 503 });
   }
 }

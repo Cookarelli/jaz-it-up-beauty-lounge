@@ -1,8 +1,10 @@
+import { canIndex } from "@/lib/launch";
 import type { Metadata } from "next";
 import { Header, Footer } from "@/components/site";
 import { env } from "@/lib/env";
 import "./globals.css";
 export const metadata: Metadata = {
+  robots: { index: canIndex, follow: canIndex },
   metadataBase: new URL(env.NEXT_PUBLIC_SITE_URL),
   title: {
     default: "Jaz It Up Beauty Lounge | A little time for you",

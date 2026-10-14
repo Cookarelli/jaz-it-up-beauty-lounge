@@ -1,11 +1,12 @@
 import "server-only";
+import { boundedJson } from "./http-safety";
 import { z } from "zod";
 import { privilegedClient } from "./supabase";
 import { hashToken } from "./capabilities";
 export async function accessBooking(req: Request) {
   const input = z
     .object({ id: z.uuid(), token: z.string().regex(/^[a-f0-9]{64}$/) })
-    .safeParse(await req.json());
+    .safeParse(await boundedJson(req, 2048));
   if (!input.success) throw Error("Invalid capability");
   const db = privilegedClient();
   const { data, error } = await db

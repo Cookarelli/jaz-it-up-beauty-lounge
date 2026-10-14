@@ -1,3 +1,4 @@
+import { onlineBookingReady } from "@/lib/launch";
 import { Intro } from "@/components/site";
 import { BookingForm } from "@/components/booking-form";
 import { catalog } from "@/lib/catalog";
@@ -6,7 +7,10 @@ import { integrations } from "@/lib/integrations";
 import { smsReady } from "@/lib/integration-config";
 import { privilegedClient } from "@/lib/supabase";
 import { env } from "@/lib/env";
-export const metadata = { title: "Book an appointment" };
+export const metadata = {
+  alternates: { canonical: "/book" },
+  title: "Book an appointment",
+};
 export default async function Book({
   searchParams,
 }: {
@@ -29,7 +33,7 @@ export default async function Book({
       <Intro eyebrow="TIME JUST FOR YOU" title="Let’s book your visit.">
         Choose your service and a time that works for you. No account needed.
       </Intro>
-      {live && env.SUPABASE_SECRET_KEY && options.length > 0 ? (
+      {live && onlineBookingReady && options.length > 0 ? (
         <BookingForm
           services={options}
           allowSms={allowSms}

@@ -2,7 +2,10 @@ import { Intro, Button } from "@/components/site";
 import { publicProfile } from "@/lib/salon-profile";
 import { weekdays } from "@/lib/admin-time";
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Contact" };
+export const metadata = {
+  alternates: { canonical: "/contact" },
+  title: "Contact",
+};
 export default async function Contact() {
   const s = await publicProfile();
   return (

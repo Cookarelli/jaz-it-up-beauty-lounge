@@ -1,5 +1,8 @@
 import { Intro } from "@/components/site";
-export const metadata = { title: "Privacy" };
+export const metadata = {
+  alternates: { canonical: "/privacy" },
+  title: "Privacy",
+};
 export default function Privacy() {
   return (
     <section className="narrow">

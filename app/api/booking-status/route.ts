@@ -1,5 +1,8 @@
+import { apiGuard } from "@/lib/api-guard";
 import { accessBooking } from "@/lib/booking-access";
 export async function POST(req: Request) {
+  const blocked = await apiGuard(req, "status");
+  if (blocked) return blocked;
   try {
     const { data, db } = await accessBooking(req);
     if (data.appointment_id) {
