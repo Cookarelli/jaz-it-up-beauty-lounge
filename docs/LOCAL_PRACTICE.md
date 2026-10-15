@@ -37,6 +37,36 @@ The first setup downloads container images and app dependencies. Progress logs a
 
 Existing practice records are preserved when starting again. Do not run the automated E2E stack at the same time; it uses the same local ports.
 
+### Optional complete practice menu
+
+The original salon board has 23 services with 32 individual service/variant choices. Initially, only 11 choices have both a bookable price and approved exact duration. Haircuts and other unfinished choices still appear on Services, but do not appear in the booking dropdown.
+
+On October 15, 2026, the project owner approved temporary durations and editable practice prices so the full menu can be tried locally. After setup, opt in with:
+
+```sh
+npm run practice:catalog
+```
+
+Refresh `/book`. This adds the 21 previously unavailable choices using the existing authenticated owner editor RPC, including its revision checks and audit history. Changed names end in **(practice)**, and descriptions/admin notes explain that Delia must review these values before launch. The command refuses hosted configuration, does not alter historical migrations or the original board, and preserves later manual edits. Repeating it does not duplicate edits. It is not run automatically by setup or startup.
+
+| Practice choice | Starting estimate | Reserved minutes |
+| --- | --- | --- |
+| Men's haircut | $20 | 30 |
+| Women's haircut | $20 | 60 |
+| Kids haircut | $10 | 30 |
+| Beard / mustache | $5 | 15 |
+| Extra design work | $10 fictional estimate; salon price still unknown | 30 |
+| Retouch | $50 | 90 |
+| Foil highlights | $75 | 120 |
+| Highlight cap | $45 | 120 |
+| Two colors | $85 | 120 |
+| Three colors | $95 | 180 |
+| Toner | $15 | 45 |
+| Top only / regular / spiral perm, each length variant | $45 / $65 / $85 | 120 |
+| Special occasion pins/braids | $50 | 60 |
+
+Other configured services keep their supplied values. Chemical services still include haircut/style. Buffers remain zero unless edited. The local database's approval flags permit practice reservations only; they do not represent Delia's approval for the hosted salon. Adjust these choices in **Admin → Services**, expanding the parent and then the variant for haircuts or perms. Prices are integer cents (`2500` = `$25`).
+
 ## 3. Start and sign in
 
 ```sh
@@ -62,7 +92,7 @@ The existing `PUBLIC_BOOKING_ENABLED` flag is true **only in this private local 
 4. Open the appointment, reschedule it, then cancel it using the confirmation prompt. Try a manual phone booking or walk-in using fictional details.
 5. In schedule management, add a time block and verify that interval disappears from the customer availability list. Remove it afterward.
 6. Confirm Tuesday–Friday 9 AM–7 PM, Saturday 9 AM–3 PM, Sunday/Monday closed, Central Time, with no automatic lunch break. Configured service buffers still must fit before closing.
-7. Inspect services. Adult cut variant prices and other unapproved menu details remain owner-review items; use an approved service for your first booking.
+7. Inspect services. If you opted into the complete practice menu above, try men's/women's haircuts and the other choices marked `(practice)`. All temporary values still require Delia's review before launch.
 
 Use only fictional information. Changes are saved only in the local practice database and do not synchronize to the salon.
 
@@ -86,6 +116,6 @@ Do not use `supabase db push`, `supabase link`, `supabase db reset --linked` or 
 
 ## Validation limits
 
-The existing real Supabase browser suite passed in disposable CI containers. The new launcher has automated safety checks, but the Colima setup and manual practice session must also be verified on the Mac Mini after its runtime is installed. A successful build alone is not evidence of a running local database or a successful booking.
+The existing real Supabase browser suite passed in disposable CI containers. On October 15, 2026, the Mac Mini's Colima practice stack was also verified: loopback bindings, synthetic guest reservation, owner login, rescheduling, anonymous customer-read rejection, working hours and Chicago DST behavior. A successful build alone is not evidence of a running database or production readiness.
 
 Sources: [Colima installation](https://colima.run/docs/installation/), [Colima profiles](https://colima.run/docs/profiles/), [Supabase local development](https://supabase.com/docs/guides/local-development).

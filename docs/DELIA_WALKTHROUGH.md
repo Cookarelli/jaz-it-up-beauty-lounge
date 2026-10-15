@@ -31,6 +31,8 @@ Your confirmed schedule is **Tuesday–Friday 9 AM–7 PM, Saturday 9 AM–3 PM;
 
 Under **Services**, expand the service and its variants. Configure prices, duration, length qualification, availability and optional preparation/cleanup time. Approve a price and duration only when correct. Published services with unresolved values stay visible for consultation but cannot be booked instantly. Archive rather than delete to preserve history. Save errors protect against stale edits from another tab.
 
+The optional [complete local practice menu](LOCAL_PRACTICE.md#optional-complete-practice-menu) adds temporary values accepted by the project owner on October 15, 2026. Choices marked `(practice)` can be reserved in that isolated database. These values are not Delia's final approval and are never copied automatically to the hosted project. Review every practice price/duration before launch; the table below describes the original salon board's outstanding decisions.
+
 Under **Salon & policies**, edit the real contact details, address, social links, homepage wording and cancellation terms. Preview the public pages after saving. Keep **Payments** set to no deposit and all **Communications** switches off for this development phase.
 
 ## Details to approve before launch

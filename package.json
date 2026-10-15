@@ -14,6 +14,7 @@
     "test:e2e": "playwright test",
     "practice:setup": "node scripts/practice.mjs setup",
     "practice:start": "node scripts/practice.mjs start",
+    "practice:catalog": "node scripts/practice.mjs catalog",
     "practice:stop": "node scripts/practice.mjs stop"
   },
   "dependencies": {

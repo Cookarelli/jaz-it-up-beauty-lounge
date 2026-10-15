@@ -5,6 +5,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
+import { configurePracticeCatalog } from "./practice-catalog.mjs";
 import {
   cleanEnvironment, localDockerHost, practiceContext, practiceEnvironment,
   practiceOrigin, practiceProject, verifyBindings,
@@ -100,7 +101,7 @@ async function seedCustomers(config) {
 }
 
 try {
-  if (!["setup", "start", "stop"].includes(action)) throw Error("Use npm run practice:setup, practice:start or practice:stop.");
+  if (!["setup", "start", "stop", "catalog"].includes(action)) throw Error("Use npm run practice:setup, practice:start, practice:stop or practice:catalog.");
   if (action === "setup") {
     await connectDocker();
     if (await exists(folder)) {
@@ -144,7 +145,13 @@ try {
   } else {
     await verifyWorkspace();
     await connectDocker();
-    if (action === "stop") {
+    if (action === "catalog") {
+      await checkContainers();
+      const config = await readJson(join(app, ".e2e/environment.json"));
+      const result = await configurePracticeCatalog(config);
+      console.log(`Configured ${result.updated} local practice service choices. Refresh /book to see them. No hosted catalog was changed.`);
+      if (result.skipped.length) console.log(`Preserved manually edited entries: ${result.skipped.join(", ")}. Adjust these through /admin/services.`);
+    } else if (action === "stop") {
       await logged("npx", cliArgs("stop"), "stop.log");
       console.log("Local database stopped; practice records preserved. Stop the app with Control-C in its Terminal.");
     } else {
