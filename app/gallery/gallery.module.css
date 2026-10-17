@@ -7,6 +7,7 @@
 
 .item {
   margin: 0;
+  align-self: start;
   overflow: hidden;
   border: 1px solid #dedfd4;
   border-radius: 8px;
@@ -26,9 +27,36 @@
   transition: transform 200ms ease;
 }
 
+/* Frame the supplied social screenshot around both photos and its caption. */
+.collageLink {
+  aspect-ratio: 2 / 3;
+}
+
+.collagePhoto {
+  object-position: 50% 73%;
+}
+
 .photoLink:hover .photo,
 .photoLink:focus-visible .photo {
   transform: scale(1.025);
+}
+
+.photoLink:hover .collagePhoto,
+.photoLink:focus-visible .collagePhoto {
+  transform: none;
+}
+
+.photoLink:focus-visible {
+  outline-offset: -4px;
+}
+
+.photoLink:focus-visible::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  z-index: 1;
+  border: 3px solid #ba8d35;
+  pointer-events: none;
 }
 
 .caption {

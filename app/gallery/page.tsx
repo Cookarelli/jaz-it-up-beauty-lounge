@@ -19,14 +19,14 @@ export default function Gallery() {
           {galleryPhotos.map((photo) => (
             <figure className={styles.item} key={photo.src}>
               <a
-                className={styles.photoLink}
+                className={`${styles.photoLink} ${photo.presentation === "collage" ? styles.collageLink : ""}`}
                 href={photo.src}
                 target="_blank"
                 rel="noopener noreferrer"
-                aria-label={`View full-size photo: ${photo.alt}`}
+                aria-label={`View full-size photo: ${photo.alt} (opens in a new tab)`}
               >
                 <Image
-                  className={styles.photo}
+                  className={`${styles.photo} ${photo.presentation === "collage" ? styles.collagePhoto : ""}`}
                   src={photo.src}
                   alt={photo.alt}
                   fill

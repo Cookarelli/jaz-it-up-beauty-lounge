@@ -1,8 +1,10 @@
 # Jaz It Up Beauty Lounge — gallery photo handoff
 
-The website currently has placeholders, not salon photography. This branch
-prepares a responsive gallery for **Delia-approved originals**; it does not
-publish or misrepresent photographs found on unrelated internet listings.
+The gallery contains four images supplied and explicitly selected for gallery
+use by the project owner on October 16, 2026 ("here are three for the gallery.
+More to come"). These are user-supplied screenshots, not original camera files
+or images downloaded from Google. Additional approved photos can be appended
+to the existing manifest without rebuilding the gallery.
 
 ## Source and approval
 
@@ -17,11 +19,33 @@ the profile or grant permission to reproduce its photos. Reviewer-uploaded
 photos are present. No Google image endpoint was scraped and no photos were
 downloaded, hotlinked, or substituted with stock imagery.
 
-### Required handoff from Delia
+### Supplied batch — October 16, 2026
 
-No original image files or per-photo publication approvals were found in the
-PR branch or PR discussion. The manifest therefore remains empty. Delia needs
-to provide:
+| Supplied screenshot | Local WebP | Dimensions | Bytes |
+| --- | --- | --- | --- |
+| 10.06.00 PM | `salon-styling-stations.webp` | 1346 × 908 | 167,650 |
+| 10.06.12 PM | `jaz-it-up-mirror-logo.webp` | 748 × 920 | 37,858 |
+| 10.07.10 PM | `textured-curls-tapered-cut.webp` | 746 × 820 | 51,160 |
+| 9.52.54 PM | `hair-extensions-before-and-after.webp` | 739 × 1600 | 76,798 |
+
+Source: the attachments supplied in the project conversation. The user's
+selection authorizes this batch; no separate statement from Delia is claimed.
+Do not infer blanket approval for other Google/reviewer photos.
+
+Converted with Sharp to WebP at quality 82, with orientation normalization and
+no upscaling. EXIF, ICC, XMP, and IPTC are absent from all four outputs. Combined
+size is 333,466 bytes, down from 4,932,321 bytes (about 93% smaller). Screenshot
+content is retained, including the interior image's viewer arrow; the gallery's
+existing portrait crop hides that edge, while the full-size link shows the
+complete supplied frame. The extensions screenshot is framed with CSS around
+both photos, the original caption, and the PicCollage mark; the full-size asset
+retains the social interface. The second attachment was explicitly selected
+with "add these". Camera originals would improve source quality and
+remove screenshot UI without reconstructing the photography.
+
+### Handoff for additional photos
+
+For subsequent batches, provide:
 
 - Original full-resolution JPG, PNG, HEIC, or WebP files, as attachments or an
   accessible download folder/ZIP. Use phone/computer originals or an authorized
@@ -69,7 +93,7 @@ indexing, alter Supabase migrations, or change pricing/hours as part of photo
 work. A preview is enough for Delia's approval. No paid hosting or Google
 service is required for the photo gallery.
 
-## Verification — October 16, 2026
+## Earlier verification — before the supplied batch
 
 Existing gallery implementation and empty manifest preserved; this follow-up
 changes only this handoff document. No approved originals were available to
@@ -90,3 +114,24 @@ optimize or add to `public/images/gallery/`.
   per-photo alt text/captions, metadata removal, and browser accessibility
   verification remain pending approved originals. No populated-gallery test
   is claimed for an empty manifest.
+
+## Verification — supplied photos
+
+The existing gallery was populated rather than rebuilt. Added four local WebP
+assets and accurate manifest entries. The collage has a dedicated CSS frame
+that retains both photos, its original caption, and its creator mark. Full-size
+links announce their new-tab behavior, and an inset gold focus indicator paints
+above the photos instead of being clipped by the cards.
+
+- All four optimized assets have no EXIF/ICC/XMP/IPTC metadata.
+- Lint, standalone TypeScript, and the Webpack production build pass on Node
+  24.13.0. The default Turbopack port limitation is recorded above; no build
+  settings were changed.
+- Browser checks: local image optimizer loads the supplied photos, descriptive
+  alt text and captions appear in the accessibility tree, and keyboard links
+  show a visible focus indicator. These are focused manual checks, not a claim
+  of full WCAG certification.
+- Responsive gallery: one column at 390px, two at 820px, three at 1280px; no
+  horizontal overflow. Both views in the extensions collage remain visible.
+- No database, booking, payment, messaging, deployment, or launch-setting
+  changes. No production deployment was performed.
