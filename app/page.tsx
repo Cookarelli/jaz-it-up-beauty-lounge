@@ -1,10 +1,19 @@
 export const metadata = { alternates: { canonical: "/" } };
-import { Button, Placeholder } from "@/components/site";
+import Image from "next/image";
+import { Button } from "@/components/site";
 import { ArrowUpRight, Sparkles, Heart, Scissors } from "lucide-react";
 import { publicProfile } from "@/lib/salon-profile";
+import { galleryPhotos } from "@/lib/gallery-photos";
+import styles from "./home.module.css";
+
 export const dynamic = "force-dynamic";
+
 export default async function Home() {
   const profile = await publicProfile();
+  const featuredPhotos = galleryPhotos.filter(
+    (photo) => photo.src !== "/images/gallery/salon-styling-stations.webp",
+  );
+
   return (
     <>
       <section className="hero">
@@ -30,14 +39,23 @@ export default async function Home() {
         </div>
         <div className="hero-art">
           <div className="arch">
-            <Placeholder label="Your next chapter starts here" />
+            <div className={styles.heroPhoto}>
+              <Image
+                src="/images/gallery/salon-styling-stations.webp"
+                alt="Inside Jaz It Up Beauty Lounge: styling stations, framed mirrors, salon chairs and professional hair tools"
+                fill
+                priority
+                sizes="(max-width: 760px) 88vw, 46vw"
+                className={styles.heroImage}
+              />
+            </div>
           </div>
           <div className="art-caption">
             COME AS YOU ARE.
             <br />
             <i>Leave feeling like you.</i>
           </div>
-          <span className="art-star">✳</span>
+          <span className="art-star" aria-hidden="true">✳</span>
         </div>
       </section>
       <div className="ribbon">
@@ -50,9 +68,7 @@ export default async function Home() {
             <span className="eyebrow">THE MENU</span>
             <h2>Your hair. Your kind of beautiful.</h2>
           </div>
-          <Button secondary href="/services">
-            All services
-          </Button>
+          <Button secondary href="/services">All services</Button>
         </div>
         <div className="cards">
           {[
@@ -84,6 +100,40 @@ export default async function Home() {
           })}
         </div>
       </section>
+      <section aria-labelledby="real-salon-gallery-title">
+        <div className="section-heading">
+          <div>
+            <span className="eyebrow">A PEEK INSIDE JAZ IT UP</span>
+            <h2 id="real-salon-gallery-title">Real looks. A real little escape.</h2>
+          </div>
+          <Button secondary href="/gallery">See all photos</Button>
+        </div>
+        <div className={styles.featuredGallery}>
+          {featuredPhotos.map((photo) => (
+            <figure className={styles.featuredCard} key={photo.src}>
+              <a
+                href="/gallery"
+                className={styles.featuredLink}
+                aria-label={`Explore our gallery: ${photo.alt}`}
+              >
+                <Image
+                  src={photo.src}
+                  alt={photo.alt}
+                  fill
+                  sizes="(max-width: 760px) 88vw, (max-width: 1020px) 45vw, 30vw"
+                  className={`${styles.featuredImage} ${photo.presentation === "collage" ? styles.collageImage : ""}`}
+                />
+              </a>
+              <figcaption className={styles.featuredCaption}>
+                {photo.category && (
+                  <span className={styles.featuredCategory}>{photo.category}</span>
+                )}
+                {photo.caption}
+              </figcaption>
+            </figure>
+          ))}
+        </div>
+      </section>
       <section className="about">
         <div>
           <span className="eyebrow">A PERSONAL TOUCH</span>
@@ -98,16 +148,12 @@ export default async function Home() {
             {profile?.about_text ||
               "Welcome to Delia’s Jaz It Up Beauty Lounge. A warm space for fresh looks, personal attention, and a well-deserved moment to yourself."}
           </p>
-          <Button secondary href="/book">
-            Let’s make time for you
-          </Button>
+          <Button secondary href="/book">Let’s make time for you</Button>
         </div>
       </section>
       <section className="cta">
         <span className="eyebrow">YOUR CHAIR IS WAITING</span>
-        <h2>
-          Ready for a little <em>Jaz?</em>
-        </h2>
+        <h2>Ready for a little <em>Jaz?</em></h2>
         <Button href="/book">Book your visit</Button>
       </section>
     </>

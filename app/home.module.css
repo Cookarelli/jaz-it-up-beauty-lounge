@@ -1,0 +1,100 @@
+.heroPhoto {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 470px;
+  min-height: 340px;
+  background: #dfe6da;
+  overflow: hidden;
+}
+
+.heroImage {
+  object-fit: cover;
+  object-position: center center;
+}
+
+.featuredGallery {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 22px;
+  margin-top: 30px;
+}
+
+.featuredCard {
+  margin: 0;
+  background: #fffdf7;
+  border: 1px solid #dedfd4;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.featuredLink {
+  display: block;
+  position: relative;
+  aspect-ratio: 4 / 5;
+  background: #e8ece3;
+  overflow: hidden;
+}
+
+.featuredImage {
+  object-fit: cover;
+  transition: transform 180ms ease;
+}
+
+.featuredLink:hover .featuredImage,
+.featuredLink:focus-visible .featuredImage {
+  transform: scale(1.025);
+}
+
+.collageImage {
+  object-fit: contain;
+}
+
+.featuredLink:hover .collageImage,
+.featuredLink:focus-visible .collageImage {
+  transform: none;
+}
+
+.featuredLink:focus-visible {
+  outline-offset: -4px;
+}
+
+.featuredLink:focus-visible::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  z-index: 1;
+  border: 3px solid #ba8d35;
+  pointer-events: none;
+}
+
+.featuredCaption {
+  padding: 16px 18px;
+  color: #283a36;
+  font-size: 14px;
+}
+
+.featuredCategory {
+  display: block;
+  color: #145b59;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  margin-bottom: 5px;
+}
+
+@media (max-width: 760px) {
+  .heroPhoto { height: 370px; }
+  .featuredGallery { grid-template-columns: 1fr; gap: 18px; }
+  .featuredLink { aspect-ratio: 5 / 4; }
+  .collageImage { object-fit: contain; }
+}
+
+@media (min-width: 761px) and (max-width: 1020px) {
+  .featuredGallery { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .featuredImage { transition: none; }
+}
